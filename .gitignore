@@ -1,0 +1,9 @@
+node_modules/
+dist/
+e2e/_site/
+e2e/report.json
+screenshots/probe_*.png
+.DS_Store
+*.local
+.vite/
+coverage/

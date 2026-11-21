@@ -1,0 +1,28 @@
+{
+  "name": "ai-roundtable",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "description": "AI Roundtable 3.0 — 카카오톡형 AI 단체 채팅 회의 앱 (React + TS + Vite 정적 PWA)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "icons": "python3 scripts/gen_icons.py",
+    "test:e2e": "python3 e2e/e2e.py"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}
