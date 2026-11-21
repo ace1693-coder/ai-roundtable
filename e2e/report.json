@@ -1,0 +1,72 @@
+{
+  "base": "http://127.0.0.1:4188/ai-roundtable/",
+  "viewport": "390x844 DPR3 mobile/touch (+360/430 레이아웃)",
+  "passed": 12,
+  "failed": 0,
+  "items": [
+    {
+      "item": "1) 채팅방 생성 + 주제별 역할 자동 배정",
+      "ok": true,
+      "detail": "주제 키워드 → 제조 역할 3종 자동 배정 확인"
+    },
+    {
+      "item": "2) ChatGPT/Gemini/Pickle 프로필 SVG 구분 + 이름·역할 표시",
+      "ok": true,
+      "detail": "fill=#10A37F/gradient ['#4285F4', '#9B72CB']/#FF7A00 · 참가자 4명 이름·역할 표시"
+    },
+    {
+      "item": "3) 사용자 메시지 전송 + 오른쪽 말풍선/시간/출처",
+      "ok": true,
+      "detail": "말풍선 x=91, 오른쪽 정렬·시간·출처 표시"
+    },
+    {
+      "item": "4) 사용자 메시지 반영 프롬프트 생성 + 수동 응답 등록",
+      "ok": true,
+      "detail": "대상 ChatGPT · 프롬프트 865자에 사용자 메시지·역할·지식후보 포함 · 붙여넣기 등록 성공"
+    },
+    {
+      "item": "5) @ChatGPT·@Gemini·@Pickle·@전체 멘션",
+      "ok": true,
+      "detail": "@Gemini → Gemini 우선 / @전체 → 3명 대기열(ChatGPT부터) 확인"
+    },
+    {
+      "item": "6) 회의 중 사용자 끼어들기 최우선 반영",
+      "ok": true,
+      "detail": "대기 중이던 ChatGPT 턴을 밀어내고 Pickle이 최우선"
+    },
+    {
+      "item": "8) 대화 검색·메시지 고정·지식 저장소",
+      "ok": true,
+      "detail": "검색 2건 · 핀 배너 · 지식 저장 및 저장 표시"
+    },
+    {
+      "item": "7) 회의 저장/불러오기 + 새로고침 유지",
+      "ok": true,
+      "detail": "새로고침 후 메시지 5개·핀 유지, 이전 회의 목록에서 재진입"
+    },
+    {
+      "item": "9) 일시정지/종료 및 회의 요약 생성",
+      "ok": true,
+      "detail": "일시정지→재개→종료(로컬 요약 생성)→이어가기"
+    },
+    {
+      "item": "보조) 새 회의에 관련 기억 자동 불러오기",
+      "ok": true,
+      "detail": "새 회의에서 관련 기억 1건 자동 매칭"
+    },
+    {
+      "item": "10) 360·390·430px 가로 스크롤 0·레이아웃 유지",
+      "ok": true,
+      "detail": "360px: scrollWidth 360/360 / 390px: scrollWidth 390/390 / 430px: scrollWidth 430/430"
+    },
+    {
+      "item": "11) PWA 로드·콘솔/페이지 에러 0·외부 요청 0",
+      "ok": true,
+      "detail": "manifest/ sw.js/ 아이콘 200 · SW 제어 중 · 콘솔 0·페이지 0·외부 0"
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "external_requests": [],
+  "finished_at": "2026-11-22 02:41:29"
+}
