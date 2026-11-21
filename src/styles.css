@@ -1027,3 +1027,12 @@ select:focus {
 .turn-bar.ended .turn-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+.turn-link {
+  display: inline-block;
+  margin-top: 2px;
+  color: var(--yellow);
+  font-size: 10.5px;
+  text-decoration: none;
+  opacity: 0.9;
+}

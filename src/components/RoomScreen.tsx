@@ -369,6 +369,17 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
                 {meeting.queue.length > 0 ? `대기 ${meeting.queue.length} · 멘션·사용자 지시 우선` : '규칙 엔진이 고른 다음 발언'}{' '}
                 · 수동 연결
               </div>
+              {target !== 'pickle' ? (
+                <a
+                  className="turn-link"
+                  href={target === 'chatgpt' ? 'https://chatgpt.com/' : 'https://gemini.google.com/app'}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  data-testid="open-ai-web"
+                >
+                  {PARTICIPANTS[target].name} 웹 열기 ↗
+                </a>
+              ) : null}
             </div>
           </div>
           <div className="turn-actions">
