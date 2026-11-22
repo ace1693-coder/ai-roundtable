@@ -43,9 +43,31 @@
 | 안드로이드 실제 기기(사용자 폰)에서 홈 화면 추가·설치 배너 | **미실행** | 원격 headless Chromium으로는 실기기 설치 UI를 확인할 수 없다. manifest·SW·아이콘 200과 SW 제어까지 확인했고, 사용자가 배포 URL을 폰 크롬으로 열어 "홈 화면에 추가"로 최종 확인해야 한다. |
 | 오프라인 재실행(비행기 모드) | **미실행** | 정적 서버를 유지한 상태에서 SW 캐시만으로 재접속하는 실험은 하지 않았다. 앱셸 선캐시+탐색 network-first 구조만 코드로 존재. |
 | 실제 OpenAI/Gemini API 자동 응답 | **미실행** | 유료 API 보류 지침 + 키 미보유. 코드 경로(`src/lib/api.ts`)만 있고, 키 미입력 시 버튼이 나타나지 않으며 "API 미연결"로 표시한다. |
-| GitHub Pages 실제 배포 URL | **미배포** | `ace1693-coder/ai-roundtable` 저장소가 없고(gh 확인), 새 저장소 생성은 권한 제한. 로컬 git 커밋까지 완료. |
+| GitHub Pages 실제 배포 URL | **배포 완료(2026-11-22 13:16)** — `https://ace1693-coder.github.io/ai-roundtable/` · 아래 5절 참조 |
 
-## 4. 확인된 결함과 수정
+## 4. GitHub Pages 실서버 배포 검증 (2026-11-22)
+
+- 저장소: `ace1693-coder/ai-roundtable` (PUBLIC) · `main`(소스) + `gh-pages`(dist 빌드 산출물, `/.nojekyll` 포함)
+- Pages 설정: `build_type=legacy`, source `gh-pages` / `/`, `https_enforced=true` — gh-pages 푸시 후 GitHub이 자동 활성화, 빌드 `status=built`
+- 접속 URL: **https://ace1693-coder.github.io/ai-roundtable/**
+- 스크립트: `e2e/live_check.py` · 결과 원본: `e2e/live_report.json`
+- 환경: Chromium(headless), 390×844 · DPR 3 · mobile+touch · ko-KR · Asia/Seoul, 네트워크 = 실제 인터넷
+
+| 검증 항목 | 결과 | 실측값 |
+|---|---|---|
+| 문서 응답 | 통과 | HTTP 200 (`text/html`) |
+| 자산 응답 | 통과 | index.html 1,015B · JS 201,600B · CSS 13,733B · manifest 987B · icon 3종 · sw.js 1,916B — 전부 200, 4xx/5xx 0 |
+| 모바일 렌더 | 통과 | #root 자식 존재, clientWidth 390 = scrollWidth 390(가로 스크롤 없음) |
+| 채팅방 생성 | 통과 | 주제 입력 → `room-title` "실서버 배포 확인 회의", 참가자 4명 |
+| 사용자 메시지 전송 | 통과 | 내 말풍선 1개, `출처: 사용자`, `오후 01:16` |
+| PWA | 통과 | `serviceWorker: registered:active`, manifest 파싱(name·standalone·아이콘 4) |
+| 콘솔·페이지 에러 | 통과 | console error 0 · pageerror 0 · requestfailed 0 |
+
+스크린샷: `screenshots/live-pages-390x844-home.png`, `screenshots/live-pages-390x844-room.png`
+
+배포 방식 메모: GitHub App 연결에 `workflows` 권한이 없어 `.github/workflows/deploy.yml`(Actions 배포)은 푸시가 거부된다. 그래서 워크플로를 저장소에서 제거하고(원본은 `projects/ai-roundtable-deploy-workflow.yml.bak`) Pocket-tools와 동일한 gh-pages 브랜치 방식으로 배포했다. 재배포는 `dist/` 빌드 후 gh-pages 브랜치에 덮어쓰면 된다.
+
+## 5. 확인된 결함과 수정
 
 | 발견 | 수정 |
 |---|---|

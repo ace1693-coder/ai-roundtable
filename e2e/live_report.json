@@ -1,0 +1,85 @@
+{
+  "url": "https://ace1693-coder.github.io/ai-roundtable/",
+  "checks": [
+    {
+      "item": "HTTP 문서 응답 200",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "item": "최종 URL",
+      "ok": true,
+      "detail": "https://ace1693-coder.github.io/ai-roundtable/"
+    },
+    {
+      "item": "자산 응답 200",
+      "ok": true,
+      "detail": "자산 2건, 4xx/5xx 없음"
+    },
+    {
+      "item": "본문 텍스트 렌더",
+      "ok": true,
+      "detail": "'AI 단체 채팅 회의\\n\\nAI Roundtable\\n새 회의\\n코팅 공정 불량 개선\\n부업 수익 구조 점검\\nPWA 앱 배포 설계\\n수면 습관 개선\\n주제 분석 · 일반\\n관련 기억 0건 자동 불러오기\\nChatGPT\\n· 전략 분석가\\nGemini\\n· 검증 담당\\nPickle\\n· 사회자\\n회의방 만들기\\n\\n기'"
+    },
+    {
+      "item": "#root 자식 존재",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "item": "가로 스크롤 없음(390px)",
+      "ok": true,
+      "detail": "clientWidth=390, scrollWidth=390"
+    },
+    {
+      "item": "서비스워커",
+      "ok": true,
+      "detail": "registered:active"
+    },
+    {
+      "item": "웹 매니페스트 로드",
+      "ok": true,
+      "detail": "AI Roundtable — AI 단체 채팅 회의|standalone|4"
+    },
+    {
+      "item": "채팅방 진입 렌더",
+      "ok": true,
+      "detail": "room-title=실서버 배포 확인 회의"
+    },
+    {
+      "item": "사용자 메시지 전송 반영",
+      "ok": true,
+      "detail": "내 말풍선 1개"
+    },
+    {
+      "item": "채팅방 화면 스크린샷",
+      "ok": true,
+      "detail": "room-title=실서버 배포 확인 회의"
+    },
+    {
+      "item": "콘솔 에러 0건",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "item": "페이지 에러 0건",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "item": "실패 요청 0건",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "failed_requests": [],
+  "responses": {
+    "https://ace1693-coder.github.io/ai-roundtable/": 200,
+    "https://ace1693-coder.github.io/ai-roundtable/assets/index-vqDLPl-D.css": 200,
+    "https://ace1693-coder.github.io/ai-roundtable/assets/index-DGuWoSoO.js": 200,
+    "https://ace1693-coder.github.io/ai-roundtable/manifest.webmanifest": 200
+  },
+  "final_url": "https://ace1693-coder.github.io/ai-roundtable/"
+}

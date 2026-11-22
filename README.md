@@ -4,7 +4,7 @@
 서버·DB 없이 정적 파일로 돌고, 회의·기억·설정은 이 기기 브라우저(localStorage)에만 저장한다.
 
 - 스택: React 18 + TypeScript + Vite 5 (`base: './'`) + 자체 서비스워커
-- 배포: GitHub Pages 하위 경로(`/ai-roundtable/`) 기준 상대경로 빌드
+- 배포: **https://ace1693-coder.github.io/ai-roundtable/** (GitHub Pages, `gh-pages` 브랜치) — 하위 경로 기준 상대경로 빌드
 - 외부 AI 연결: **기본은 수동 연결**(프롬프트 복사 → ChatGPT/Gemini 게스트 웹 답변 붙여넣기). 선택으로 본인 API 키를 넣으면 실제 호출.
 
 ## 실행
