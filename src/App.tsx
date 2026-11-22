@@ -18,6 +18,7 @@ import { loadWorkspace, saveWorkspace } from './lib/db';
 import { buildLocalSummary } from './lib/summary';
 import { isWorkerConfigured, requestSummary, requestTurn, WorkerError } from './lib/workerClient';
 import { scanSensitive } from '../shared/sensitive';
+import { parseDecisionLine } from '../shared/protocol';
 import { MEETING_TUNING, callBudget } from './config/meeting';
 import { PARTICIPANTS } from './lib/participants';
 import { HomeScreen } from './components/HomeScreen';
@@ -378,10 +379,13 @@ export default function App() {
 
     try {
       const res = plan.mode === 'summary' ? await requestSummary(settings, req) : await requestTurn(settings, req);
+      // Worker가 NEXT 표식을 떼지만, 다른 경로로 표식이 남아 오면 화면에 보이지 않게 한 번 더 걷어 낸다.
+      const scrubbed = plan.mode === 'decide' ? parseDecisionLine(res.text) : { text: res.text, decision: undefined };
+      const decision = res.decision ?? scrubbed.decision;
       const message: ChatMessage = {
         id: newId('msg'),
         authorId: plan.speaker,
-        text: res.text,
+        text: scrubbed.text || res.text,
         createdAt: Date.now(),
         source: 'api',
         roleAtTime: meeting.roles[plan.speaker],
@@ -396,7 +400,7 @@ export default function App() {
 
       if (plan.mode === 'decide') {
         // 사회자 결정 턴: 본문만 남기고 다음 발언자를 상태에 적는다.
-        append(meeting.id, message, { ...applyDecision(meeting, res.decision), ...counted, ...sent });
+        append(meeting.id, message, { ...applyDecision(meeting, decision), ...counted, ...sent });
       } else if (plan.mode === 'summary') {
         patch(meeting.id, (m) => ({
           messages: [...m.messages, message],

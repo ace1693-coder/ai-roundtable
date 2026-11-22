@@ -10,7 +10,7 @@
 | 앱 타입 검사 | `npx tsc --noEmit` | 통과(오류 0) |
 | Worker 타입 검사 | `npx tsc -p worker/tsconfig.json` | 통과(오류 0) |
 | 단위 테스트 | `npx vitest run` | **10파일 97개 통과 / 실패 0** |
-| 프로덕션 빌드 | `npm run build` | 통과 · JS 207.5KB(gzip 69.5KB) · CSS 15.4KB(gzip 4.1KB) |
+| 프로덕션 빌드 | `npm run build` | 통과 · JS 208.3KB(gzip 69.9KB) · CSS 15.4KB(gzip 4.1KB) |
 
 테스트 파일: `worker/index`(19), `worker/prompt`(7), `meetingEngine`, `memory`, `mentions`, `repetition`, `topics`,
 `shared/thinking`, `shared/sensitive`, `shared/protocol`.
