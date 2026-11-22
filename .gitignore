@@ -6,3 +6,6 @@ screenshots/probe_*.png
 *.local
 .vite/
 coverage/
+worker/.dev.vars
+worker/.wrangler/
+__pycache__/

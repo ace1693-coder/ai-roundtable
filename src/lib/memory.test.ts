@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMemory, matchMemories, parseMemoryImport } from './memory';
+import { createMemory, DEFAULT_SETTINGS, matchMemories, normalizeMaxTurns, parseMemoryImport } from './memory';
 import type { MemoryItem } from './types';
 
 function mem(partial: Partial<MemoryItem>): MemoryItem {
@@ -60,5 +60,21 @@ describe('parseMemoryImport', () => {
 
   it('배열이 없으면 거부', () => {
     expect(() => parseMemoryImport('{"a":1}')).toThrow(/memories/);
+  });
+});
+
+describe('normalizeMaxTurns', () => {
+  it('설정에서 고를 수 있는 3·5·7로 맞춘다', () => {
+    expect(normalizeMaxTurns(6)).toBe(5);
+    expect(normalizeMaxTurns(2)).toBe(3);
+    expect(normalizeMaxTurns(4)).toBe(5); // 3과 5가 같은 거리면 기본값(5) 쪽
+    expect(normalizeMaxTurns(9)).toBe(7);
+    expect(normalizeMaxTurns(7)).toBe(7);
+  });
+
+  it('값이 없거나 숫자가 아니면 기본값', () => {
+    expect(normalizeMaxTurns(undefined)).toBe(DEFAULT_SETTINGS.maxTurns);
+    expect(normalizeMaxTurns('많이')).toBe(DEFAULT_SETTINGS.maxTurns);
+    expect(DEFAULT_SETTINGS.maxTurns).toBe(5);
   });
 });

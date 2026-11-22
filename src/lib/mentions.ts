@@ -3,15 +3,19 @@ import { AI_IDS } from './types';
 
 /** "@이름" 멘션 별칭. 문장 어디에 있어도 인식한다. */
 const ALIASES: Record<string, AiId | 'all'> = {
-  chatgpt: 'chatgpt',
-  챗지피티: 'chatgpt',
-  챗gpt: 'chatgpt',
-  gpt: 'chatgpt',
+  'gptoss': 'gptoss',
+  'gpt-oss': 'gptoss',
+  'gpt': 'gptoss',
+  'oss': 'gptoss',
+  지피티: 'gptoss',
+  챗지피티: 'gptoss',
   gemini: 'gemini',
   제미나이: 'gemini',
   제미니: 'gemini',
-  pickle: 'pickle',
-  피클: 'pickle',
+  moderator: 'moderator',
+  사회자: 'moderator',
+  진행자: 'moderator',
+  피클: 'moderator',
   전체: 'all',
   모두: 'all',
   all: 'all',
@@ -63,9 +67,9 @@ export function activeMentionQuery(text: string, caret: number): { query: string
 }
 
 export const MENTION_OPTIONS: { id: AiId | 'all'; label: string; insert: string }[] = [
-  { id: 'chatgpt', label: 'ChatGPT', insert: '@ChatGPT ' },
+  { id: 'gptoss', label: 'GPT-OSS', insert: '@GPT-OSS ' },
   { id: 'gemini', label: 'Gemini', insert: '@Gemini ' },
-  { id: 'pickle', label: 'Pickle', insert: '@Pickle ' },
+  { id: 'moderator', label: '사회자', insert: '@사회자 ' },
   { id: 'all', label: '전체', insert: '@전체 ' },
 ];
 

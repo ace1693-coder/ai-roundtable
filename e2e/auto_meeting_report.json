@@ -1,0 +1,424 @@
+{
+  "appUrl": "http://127.0.0.1:4180/",
+  "workerUrl": "http://127.0.0.1:8791",
+  "checks": [
+    {
+      "name": "홈 화면 렌더",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "연결 확인이 실제 모델명을 보여 준다",
+      "ok": true,
+      "detail": "연결됨 · GPT-OSS openai/gpt-oss-120b / Gemini gemini-3.5-flash-lite / 사회자 gemini-3.5-flash-lite"
+    },
+    {
+      "name": "회의방 진입",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "첫 호출이 사회자의 다음 발언자 결정이다",
+      "ok": true,
+      "detail": "[{\"role\": \"moderator\", \"phase\": \"decide\", \"path\": \"/api/turn\", \"turnIndex\": 1, \"callIndex\": 1, \"participants\": [\"gptoss\", \"gemini\", \"moderator\"], \"userDirective\": null, \"decidedNext\": \"gptoss\"}, {\"role\": \"gptoss\", \"phase\": \"rebut\", \"path\": \"/api/turn\", \"turnIndex\": 2, \"callIndex\": 2, \"participants\": [\"gptoss\", \"gemini\", \"moderator\"], \"userDirective\": null, \"decidedNext\": null}]"
+    },
+    {
+      "name": "사회자가 고른 발언자에게 그다음 호출이 간다",
+      "ok": true,
+      "detail": "{\"role\": \"gptoss\", \"phase\": \"rebut\", \"path\": \"/api/turn\", \"turnIndex\": 2, \"callIndex\": 2, \"participants\": [\"gptoss\", \"gemini\", \"moderator\"], \"userDirective\": null, \"decidedNext\": null}"
+    },
+    {
+      "name": "참가자 목록을 서버에 함께 보낸다",
+      "ok": true,
+      "detail": "['gptoss', 'gemini', 'moderator']"
+    },
+    {
+      "name": "말풍선에 실제 모델·제공업체·응답시간 표기",
+      "ok": true,
+      "detail": "['gemini-3.5-flash-lite · Google AI Studio · 1.2s', 'openai/gpt-oss-120b · GroqCloud · 1.2s', 'gemini-3.5-flash-lite · Google AI Studio · 1.2s']"
+    },
+    {
+      "name": "상단에 평균 응답 시간이 보인다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "끼어든 말이 다음 요청의 최우선 지시로 실린다",
+      "ok": true,
+      "detail": "[{\"role\": \"gptoss\", \"phase\": \"rebut\", \"path\": \"/api/turn\", \"turnIndex\": 6, \"callIndex\": 6, \"participants\": [\"gptoss\", \"gemini\", \"moderator\"], \"userDirective\": \""
+    },
+    {
+      "name": "GPT-OSS를 끄면 이후 호출이 0회",
+      "ok": true,
+      "detail": "이후 4건 중 gptoss 0건"
+    },
+    {
+      "name": "끈 상태에서도 회의는 계속 돈다",
+      "ok": true,
+      "detail": "4건"
+    },
+    {
+      "name": "다시 켜면 다시 호출된다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "일시정지 버튼을 누를 수 있다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "일시정지 중에는 API를 부르지 않는다",
+      "ok": true,
+      "detail": "14→14"
+    },
+    {
+      "name": "재개하면 다시 진행한다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "공동 기억이 IndexedDB에 저장된다",
+      "ok": true,
+      "detail": "{\"meetings\": 1, \"memories\": 1}"
+    },
+    {
+      "name": "IndexedDB에 회의가 저장된다",
+      "ok": true,
+      "detail": "{\"meetings\": 1, \"memories\": 1}"
+    },
+    {
+      "name": "새로고침해도 회의방이 복원된다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "메시지가 IndexedDB에서 그대로 복원된다",
+      "ok": true,
+      "detail": "19→21"
+    },
+    {
+      "name": "사용자 종료 시 사회자 최종 정리가 남는다",
+      "ok": true,
+      "detail": "1. 결론: 점검 주기를 2주로 줄이고 불량률·정지 시간을 함께 기록한다.\n2. 합의된 것: 데이터 없이 설비를 바꾸지 않는다.\n3. 갈린 쟁점"
+    },
+    {
+      "name": "종료 상태 표시",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "고정 라운드 상한 없이 예산까지 진행한다",
+      "ok": true,
+      "detail": "최대 callIndex 21"
+    },
+    {
+      "name": "콘솔 에러 0건",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "페이지 에러 0건",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "requests": [
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 1,
+      "callIndex": 1,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 2,
+      "callIndex": 2,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 3,
+      "callIndex": 3,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 4,
+      "callIndex": 4,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 5,
+      "callIndex": 5,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 6,
+      "callIndex": 6,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": "라인 정지 위험을 먼저 따져 줘",
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 7,
+      "callIndex": 7,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gemini",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 8,
+      "callIndex": 8,
+      "participants": [
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 9,
+      "callIndex": 9,
+      "participants": [
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "moderator",
+      "phase": "moderate",
+      "path": "/api/turn",
+      "turnIndex": 10,
+      "callIndex": 10,
+      "participants": [
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 11,
+      "callIndex": 11,
+      "participants": [
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gemini",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 12,
+      "callIndex": 12,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 13,
+      "callIndex": 13,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 14,
+      "callIndex": 14,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 15,
+      "callIndex": 15,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 16,
+      "callIndex": 16,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 17,
+      "callIndex": 17,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 18,
+      "callIndex": 18,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "decide",
+      "path": "/api/turn",
+      "turnIndex": 19,
+      "callIndex": 19,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": "gptoss"
+    },
+    {
+      "role": "gptoss",
+      "phase": "rebut",
+      "path": "/api/turn",
+      "turnIndex": 20,
+      "callIndex": 20,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    },
+    {
+      "role": "moderator",
+      "phase": "summary",
+      "path": "/api/summary",
+      "turnIndex": 22,
+      "callIndex": 21,
+      "participants": [
+        "gptoss",
+        "gemini",
+        "moderator"
+      ],
+      "userDirective": null,
+      "decidedNext": null
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "callIndexMax": 21,
+  "requestCount": 21,
+  "passed": 24,
+  "total": 24
+}

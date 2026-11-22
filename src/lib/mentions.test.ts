@@ -4,8 +4,8 @@ import { activeMentionQuery, filterMentionOptions, parseMentions, stripMentions 
 describe('parseMentions', () => {
   it('개별 멘션을 대상으로 뽑는다', () => {
     expect(parseMentions('@Gemini 위험성 검토해').targets).toEqual(['gemini']);
-    expect(parseMentions('@ChatGPT 너는 어떻게 생각해?').targets).toEqual(['chatgpt']);
-    expect(parseMentions('@Pickle 지금까지 정리해').targets).toEqual(['pickle']);
+    expect(parseMentions('@GPT-OSS 너는 어떻게 생각해?').targets).toEqual(['gptoss']);
+    expect(parseMentions('@사회자 지금까지 정리해').targets).toEqual(['moderator']);
   });
 
   it('문장 중간의 멘션도 인식한다', () => {
@@ -13,13 +13,13 @@ describe('parseMentions', () => {
   });
 
   it('@전체는 세 AI 전부, 중복 없이', () => {
-    expect(parseMentions('@전체 다시 생각해봐').targets).toEqual(['chatgpt', 'gemini', 'pickle']);
-    expect(parseMentions('@전체 그리고 @ChatGPT도').targets).toEqual(['chatgpt', 'gemini', 'pickle']);
+    expect(parseMentions('@전체 다시 생각해봐').targets).toEqual(['gptoss', 'gemini', 'moderator']);
+    expect(parseMentions('@전체 그리고 @Gemini도').targets).toEqual(['gptoss', 'gemini', 'moderator']);
   });
 
   it('한글 별칭도 인식한다', () => {
     expect(parseMentions('@제미나이 의견').targets).toEqual(['gemini']);
-    expect(parseMentions('@피클 정리').targets).toEqual(['pickle']);
+    expect(parseMentions('@피클 정리').targets).toEqual(['moderator']);
   });
 
   it('멘션이 없으면 빈 배열', () => {

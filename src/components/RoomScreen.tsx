@@ -4,6 +4,10 @@ import { AI_IDS, MEMORY_STATUSES, MEMORY_TYPES } from '../lib/types';
 import { PARTICIPANTS, SOURCE_LABEL, authorName } from '../lib/participants';
 import { formatDateDivider, formatTime, GROUP_WINDOW_MS, isSameDay } from '../lib/format';
 import { activeMentionQuery, filterMentionOptions } from '../lib/mentions';
+import { averageLatency, describeProgress, planNextTurn } from '../lib/meetingEngine';
+import { PHASE_LABEL } from '../../shared/protocol';
+import { callBudget } from '../config/meeting';
+import type { TurnStatus } from '../App';
 import { Avatar } from './Avatar';
 import { Sheet } from './Sheet';
 import { Icon } from './Icon';
@@ -11,8 +15,6 @@ import { MemorySheet, SettingsSheet } from './DataSheets';
 
 export interface RoomActions {
   send: (text: string, attachment?: Attachment) => void;
-  register: (text: string, source: 'manual' | 'api') => void;
-  skip: () => void;
   pause: () => void;
   resume: () => void;
   end: () => void;
@@ -27,25 +29,48 @@ export interface RoomActions {
   importMemories: (text: string) => void;
   exportAll: () => void;
   importAll: (text: string) => void;
-  runApi: () => Promise<void>;
   copy: (text: string, label: string) => void;
+  beginAuto: () => void;
+  /** AI 한 명 켜기/끄기. 꺼진 AI는 실제 API를 부르지 않는다. */
+  toggleAi: (id: AiId) => void;
 }
 
 interface Props {
   meeting: Meeting;
   memories: MemoryItem[];
   settings: Settings;
-  target: AiId | null;
-  prompt: string;
-  summaryPrompt: string;
+  running: boolean;
+  turnStatus: Record<AiId, TurnStatus>;
+  workerReady: boolean;
   actions: RoomActions;
   onBack: () => void;
+  onOpenSettings: () => void;
   toast: string;
+  externalSheet?: React.ReactNode;
 }
 
-type SheetName = 'participants' | 'search' | 'memory' | 'settings' | 'summary' | 'paste' | 'saveMemory' | 'menu' | null;
+type SheetName = 'participants' | 'search' | 'memory' | 'settings' | 'summary' | 'saveMemory' | 'menu' | null;
 
-export function RoomScreen({ meeting, memories, settings, target, prompt, summaryPrompt, actions, onBack, toast }: Props) {
+const STATUS_TEXT: Record<TurnStatus, string> = {
+  idle: '대기',
+  thinking: '생각 중',
+  done: '완료',
+  error: '오류',
+};
+
+export function RoomScreen({
+  meeting,
+  memories,
+  settings,
+  running,
+  turnStatus,
+  workerReady,
+  actions,
+  onBack,
+  onOpenSettings,
+  toast,
+  externalSheet,
+}: Props) {
   const [sheet, setSheet] = useState<SheetName>(null);
   const [text, setText] = useState('');
   const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
@@ -53,7 +78,6 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
   const [search, setSearch] = useState('');
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
-  const [pasteText, setPasteText] = useState('');
   const [memoryTarget, setMemoryTarget] = useState<ChatMessage | null>(null);
   const [memoryDraft, setMemoryDraft] = useState<{ status: MemoryItem['status']; type: MemoryItem['type']; tags: string }>({
     status: '가설',
@@ -69,12 +93,14 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
   const visible = useMemo(() => meeting.messages.filter((m) => !m.deleted), [meeting.messages]);
   const pinned = useMemo(() => [...visible].reverse().find((m) => m.pinned), [visible]);
   const displayName = settings.displayName || '나';
+  const plan = useMemo(() => planNextTurn(meeting), [meeting]);
+  const avgLatency = averageLatency(meeting);
 
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
     if (nearBottom.current) el.scrollTop = el.scrollHeight;
-  }, [meeting.messages.length, sheet]);
+  }, [meeting.messages.length, sheet, running]);
 
   useEffect(() => {
     if (!highlight) return;
@@ -98,7 +124,6 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
     setMention(null);
   }
 
-  // 멘션을 끼워 넣은 직후 커서를 삽입 지점 뒤로 옮긴다(다음 타이핑이 문장 끝으로 튀지 않게).
   useLayoutEffect(() => {
     if (pendingCaret.current == null) return;
     const el = inputRef.current;
@@ -135,7 +160,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
   });
 
   const roleOf = (m: ChatMessage) => {
-    if (m.authorId === 'system') return '로컬 규칙 엔진';
+    if (m.authorId === 'system') return '';
     if (m.authorId === 'me') return '';
     return m.roleAtTime || meeting.roles[m.authorId];
   };
@@ -149,24 +174,29 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
         <div className="room-title-wrap">
           <h1 data-testid="room-title">{meeting.title}</h1>
           <p>
-            <span data-testid="participant-count">참가자 4명</span> · {meeting.status === 'active' ? '진행 중' : meeting.status === 'paused' ? '일시정지' : '종료'}
+            <span data-testid="participant-count">참가자 4명</span> ·{' '}
+            <span data-testid="progress-text">{describeProgress(meeting)}</span> ·{' '}
+            {meeting.status === 'active' ? (running ? '진행 중' : '대기') : meeting.status === 'paused' ? '일시정지' : '종료'}
           </p>
         </div>
         <button className="icon-btn" onClick={() => setSheet('search')} aria-label="대화 검색" data-testid="search-btn">
           <Icon name="search" size={19} />
         </button>
-        <button
-          className="icon-btn"
-          onClick={() => setSheet('participants')}
-          aria-label="참가자"
-          data-testid="participants-btn"
-        >
+        <button className="icon-btn" onClick={() => setSheet('participants')} aria-label="참가자" data-testid="participants-btn">
           <Icon name="users" size={19} />
         </button>
         <button className="icon-btn" onClick={() => setSheet('menu')} aria-label="메뉴" data-testid="menu-btn">
           <Icon name="menu" size={19} />
         </button>
       </header>
+
+      <div className="status-chips" data-testid="status-chips">
+        {AI_IDS.map((id) => (
+          <span key={id} className={`chip-status st-${turnStatus[id]} dot-${id}`} data-testid={`status-${id}`}>
+            <i className="dot" /> {PARTICIPANTS[id].name} · {STATUS_TEXT[turnStatus[id]]}
+          </span>
+        ))}
+      </div>
 
       {pinned ? (
         <div className="pin-banner" data-testid="pin-banner">
@@ -187,16 +217,20 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
           <div className="empty-room">
             <p>회의방이 열렸습니다.</p>
             <p className="hint">
-              아래 [프롬프트 복사]로 첫 발언 프롬프트를 가져가 ChatGPT·Gemini 웹에 붙여넣고, 받은 답변을 [답변 붙여넣기]로
-              등록하세요. 나도 언제든 말할 수 있습니다.
+              질문을 입력하면 <b>GPT-OSS</b> → <b>Gemini</b> → <b>사회자</b> 순서로 실제 API가 답합니다. 중간에 끼어들면 그
+              말이 다음 발언에 최우선으로 반영됩니다.
             </p>
+            {!workerReady ? (
+              <button className="btn primary" onClick={onOpenSettings} data-testid="empty-open-settings">
+                Worker 연결 설정
+              </button>
+            ) : null}
           </div>
         ) : null}
         {visible.map((m, i) => {
           const prev = visible[i - 1];
           const newDate = !prev || !isSameDay(prev.createdAt, m.createdAt);
-          const grouped =
-            !newDate && prev && prev.authorId === m.authorId && m.createdAt - prev.createdAt < GROUP_WINDOW_MS;
+          const grouped = !newDate && prev && prev.authorId === m.authorId && m.createdAt - prev.createdAt < GROUP_WINDOW_MS;
           const isSystem = m.authorId === 'system';
           const mine = m.authorId === 'me';
           const aiAuthor = m.authorId !== 'me' && m.authorId !== 'system' ? m.authorId : null;
@@ -216,15 +250,11 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
                 data-author={m.authorId}
                 data-source={m.source}
               >
-                {aiAuthor ? (
-                  <div className="avatar-col">{grouped ? null : <Avatar id={aiAuthor} size={36} />}</div>
-                ) : null}
+                {aiAuthor ? <div className="avatar-col">{grouped ? null : <Avatar id={aiAuthor} size={36} />}</div> : null}
                 <div className="msg-body">
                   {!grouped && !isSystem ? (
                     <div className="msg-meta">
-                      <span className={`msg-name name-${m.authorId}`}>
-                        {aiAuthor ? PARTICIPANTS[aiAuthor].name : displayName}
-                      </span>
+                      <span className={`msg-name name-${m.authorId}`}>{aiAuthor ? PARTICIPANTS[aiAuthor].name : displayName}</span>
                       {roleOf(m) ? (
                         <span className="msg-role" data-testid="msg-role">
                           · {roleOf(m)}
@@ -234,7 +264,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
                   ) : null}
                   {isSystem ? (
                     <div className="system-bubble" data-testid="system-notice">
-                      <span className="system-src">로컬 규칙 엔진</span>
+                      <span className="system-src">앱 알림</span>
                       <p>{m.text}</p>
                     </div>
                   ) : (
@@ -254,6 +284,12 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
                           ) : (
                             <span className="file-chip">📎 {m.attachment.name}</span>
                           )}
+                        </span>
+                      ) : null}
+                      {m.source === 'api' && m.model ? (
+                        <span className="model-line" data-testid="msg-model">
+                          {m.model} · {m.provider}
+                          {m.latencyMs ? ` · ${(m.latencyMs / 1000).toFixed(1)}s` : ''}
                         </span>
                       ) : null}
                       <span className={`source-badge src-${m.source}`} data-testid="msg-source">
@@ -294,7 +330,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
                           setActionMsg(null);
                         }}
                       >
-                        지식 저장
+                        기억 저장
                       </button>
                       {mine ? (
                         <>
@@ -320,7 +356,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
                       ) : null}
                     </div>
                   ) : null}
-                  {m.memoryId ? <span className="saved-note">지식 저장소에 저장됨</span> : null}
+                  {m.memoryId ? <span className="saved-note">기억 저장소에 저장됨</span> : null}
                 </div>
               </div>
             </div>
@@ -328,14 +364,50 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
         })}
       </div>
 
-      {meeting.status === 'paused' ? (
-        <div className="turn-bar paused" data-testid="pause-bar">
+      {!workerReady ? (
+        <div className="turn-bar paused" data-testid="worker-missing-bar">
           <div className="turn-main">
-            <b>회의 일시정지</b>
-            <span className="turn-note">다음 발언 제안을 멈췄습니다. 재개하면 이어갑니다.</span>
+            <b>Worker 연결 필요</b>
+            <span className="turn-note">배포한 Worker URL과 개인용 패스코드를 넣으면 자동 회의가 시작됩니다.</span>
           </div>
           <div className="turn-actions">
-            <button className="btn" onClick={actions.resume} data-testid="resume-btn">
+            <button className="btn primary" onClick={onOpenSettings} data-testid="open-settings-missing">
+              설정 열기
+            </button>
+          </div>
+        </div>
+      ) : meeting.status === 'active' && meeting.auto ? (
+        <div className="turn-bar running" data-testid="auto-bar">
+          <div className="turn-main">
+            <span className="thinking-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            <div className="turn-target-wrap">
+              <b data-testid="turn-target">{plan ? PARTICIPANTS[plan.speaker].name : '정리 중'}</b>
+              <span className="turn-role"> · {plan ? PHASE_LABEL[plan.phase] : '마무리'}</span>
+              <div className="turn-note">
+                실제 API 호출 {(meeting.callCount ?? 0) + 1}/{callBudget()}
+                {plan?.mode === 'decide' ? ' · 사회자가 다음 발언자를 고르는 중' : ''}
+                {avgLatency !== null ? ` · 평균 응답 ${(avgLatency / 1000).toFixed(1)}초` : ''}
+              </div>
+            </div>
+          </div>
+          <div className="turn-actions">
+            <button className="btn" onClick={actions.pause} data-testid="pause-btn">
+              일시정지
+            </button>
+          </div>
+        </div>
+      ) : meeting.status === 'paused' ? (
+        <div className="turn-bar paused" data-testid="pause-bar">
+          <div className="turn-main">
+            <b>일시정지</b>
+            <span className="turn-note">자동 발언을 멈췄습니다. 대화는 그대로 남아 있습니다.</span>
+          </div>
+          <div className="turn-actions">
+            <button className="btn primary" onClick={actions.resume} data-testid="resume-btn">
               재개
             </button>
             <button className="btn" onClick={() => setSheet('summary')} data-testid="summary-from-pause">
@@ -347,7 +419,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
         <div className="turn-bar ended" data-testid="ended-bar">
           <div className="turn-main">
             <b>회의 종료</b>
-            <span className="turn-note">저장된 발언은 그대로 남습니다.</span>
+            <span className="turn-note">{meeting.summary ? '사회자의 최종 정리가 저장되어 있습니다.' : '저장된 발언은 그대로 남습니다.'}</span>
           </div>
           <div className="turn-actions">
             <button className="btn" onClick={actions.reopen} data-testid="reopen-btn">
@@ -358,60 +430,27 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
             </button>
           </div>
         </div>
-      ) : target ? (
-        <div className="turn-bar" data-testid="turn-bar">
+      ) : (
+        <div className="turn-bar paused" data-testid="ready-bar">
           <div className="turn-main">
-            <Avatar id={target} size={26} />
-            <div className="turn-target-wrap">
-              <b data-testid="turn-target">{PARTICIPANTS[target].name}</b>
-              <span className="turn-role"> · {meeting.roles[target]}</span>
-              <div className="turn-note">
-                {meeting.queue.length > 0 ? `대기 ${meeting.queue.length} · 멘션·사용자 지시 우선` : '규칙 엔진이 고른 다음 발언'}{' '}
-                · 수동 연결
-              </div>
-              {target !== 'pickle' ? (
-                <a
-                  className="turn-link"
-                  href={target === 'chatgpt' ? 'https://chatgpt.com/' : 'https://gemini.google.com/app'}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  data-testid="open-ai-web"
-                >
-                  {PARTICIPANTS[target].name} 웹 열기 ↗
-                </a>
-              ) : null}
-            </div>
+            <b>다음 발언 대기</b>
+            <span className="turn-note">
+              {plan ? `${PARTICIPANTS[plan.speaker].name} · ${PHASE_LABEL[plan.phase]}` : '남은 발언이 없습니다.'}
+            </span>
           </div>
           <div className="turn-actions">
-            <button className="btn primary" onClick={() => actions.copy(prompt, '프롬프트를 복사했습니다. 게스트 웹에 붙여넣으세요.')} data-testid="copy-prompt">
-              프롬프트 복사
-            </button>
-            <button className="btn" onClick={() => setSheet('paste')} data-testid="open-paste">
-              답변 붙여넣기
-            </button>
-            {settings.autoApi &&
-            settings.apiKeys[target === 'chatgpt' ? 'openai' : target === 'gemini' ? 'gemini' : 'openai'].trim() &&
-            target !== 'pickle' ? (
-              <button className="btn" onClick={() => void actions.runApi()} data-testid="run-api">
-                API로 응답
-              </button>
-            ) : null}
-            <button className="btn ghost" onClick={actions.skip} data-testid="skip-turn">
-              건너뛰기
+            <button className="btn primary" onClick={actions.beginAuto} data-testid="start-auto">
+              자동 회의 시작
             </button>
           </div>
         </div>
-      ) : null}
+      )}
 
       <div className="composer">
         {mention ? (
           <div className="mention-popup" data-testid="mention-popup">
             {filterMentionOptions(mention.query).map((o) => (
-              <button
-                key={o.id}
-                data-testid={`mention-option-${o.id}`}
-                onClick={() => insertMention(o.insert)}
-              >
+              <button key={o.id} data-testid={`mention-option-${o.id}`} onClick={() => insertMention(o.insert)}>
                 <span className={`mention-dot dot-${o.id}`} />
                 {o.label}
               </button>
@@ -432,8 +471,12 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
           </div>
         ) : null}
         <div className="quick-mentions">
-          {(['chatgpt', 'gemini', 'pickle'] as const).map((id) => (
-            <button key={id} className={`chip dot-${id}`} onClick={() => setText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}@${PARTICIPANTS[id].name} `)}>
+          {AI_IDS.map((id) => (
+            <button
+              key={id}
+              className={`chip dot-${id}`}
+              onClick={() => setText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}@${PARTICIPANTS[id].name} `)}
+            >
               @{PARTICIPANTS[id].name}
             </button>
           ))}
@@ -470,7 +513,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
             ref={inputRef}
             className="composer-input"
             data-testid="composer-input"
-            placeholder={meeting.status === 'ended' ? '종료됨 · 이어가기를 누르세요' : '메시지 입력 (@로 AI 지정)'}
+            placeholder={meeting.status === 'ended' ? '종료됨 · 이어가기를 누르세요' : '끼어들 말 입력 (@로 AI 지정)'}
             value={text}
             disabled={meeting.status === 'ended'}
             rows={1}
@@ -502,23 +545,26 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
       <Sheet title="참가자" open={sheet === 'participants'} onClose={() => setSheet(null)} testId="participants-sheet">
         <ul className="participant-list">
           {AI_IDS.map((id) => {
-            const key = id === 'chatgpt' ? 'openai' : id === 'gemini' ? 'gemini' : null;
-            const hasKey = key ? Boolean(settings.apiKeys[key].trim()) : false;
+            const on = meeting.enabledAi[id] !== false;
             return (
-              <li key={id} className="participant" data-testid="participant-item">
+              <li key={id} className={`participant${on ? '' : ' off'}`} data-testid="participant-item" data-ai={id} data-on={on ? '1' : '0'}>
                 <Avatar id={id} size={40} />
                 <div>
                   <b>
                     {PARTICIPANTS[id].name} <span className="role">· {meeting.roles[id]}</span>
                   </b>
                   <p className="hint">
-                    {id === 'pickle'
-                      ? '수동 입력 / 로컬 규칙 엔진 (API 자동 호출 없음)'
-                      : hasKey
-                        ? `API 키 입력됨 · 자동 응답 ${settings.autoApi ? '켜짐' : '꺼짐'} (아니면 수동 연결)`
-                        : 'API 미연결 · 게스트 웹 수동 연결'}
+                    {PARTICIPANTS[id].model} · {PARTICIPANTS[id].provider} · {on ? STATUS_TEXT[turnStatus[id]] : '꺼짐(호출 안 함)'}
                   </p>
                 </div>
+                <button
+                  className={`btn small${on ? '' : ' primary'}`}
+                  onClick={() => actions.toggleAi(id)}
+                  data-testid={`toggle-${id}`}
+                  aria-pressed={on}
+                >
+                  {on ? '끄기' : '켜기'}
+                </button>
               </li>
             );
           })}
@@ -526,7 +572,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
             <Avatar id="me" size={40} emoji={settings.avatarEmoji} />
             <div>
               <b>{displayName}</b>
-              <p className="hint">사용자 · 언제든 끼어들 수 있고 그 말이 최우선</p>
+              <p className="hint">사용자 · 끼어든 말은 다음 발언에 최우선으로 반영</p>
             </div>
           </li>
         </ul>
@@ -560,13 +606,13 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
           <button
             className="btn wide"
             onClick={() => {
-              if (meeting.status === 'paused') actions.resume();
-              else actions.pause();
+              if (meeting.status === 'active' && meeting.auto) actions.pause();
+              else actions.resume();
               setSheet(null);
             }}
-            data-testid="pause-btn"
+            data-testid="pause-menu-btn"
           >
-            {meeting.status === 'paused' ? '회의 재개' : '회의 일시정지'}
+            {meeting.status === 'active' && meeting.auto ? '자동 회의 일시정지' : '자동 회의 재개'}
           </button>
           <button
             className="btn wide danger"
@@ -581,78 +627,34 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
           <button className="btn wide" onClick={() => setSheet('memory')} data-testid="open-memory">
             기억 저장소 ({memories.length})
           </button>
-          <button className="btn wide" onClick={() => setSheet('settings')} data-testid="open-settings">
-            설정
+          <button className="btn wide" onClick={onOpenSettings} data-testid="open-settings">
+            Worker·패스코드 설정
           </button>
         </div>
       </Sheet>
 
-      <Sheet title="회의 요약 (로컬 규칙 엔진)" open={sheet === 'summary'} onClose={() => setSheet(null)} testId="summary-sheet">
+      <Sheet title="회의 요약" open={sheet === 'summary'} onClose={() => setSheet(null)} testId="summary-sheet">
         <pre className="summary-text" data-testid="summary-text">
-          {meeting.summary ?? '(요약이 아직 없습니다. 회의를 종료하면 로컬 규칙 엔진 요약이 만들어집니다.)'}
+          {meeting.summary ?? '(아직 요약이 없습니다. 회의가 끝나면 사회자가 최종 정리를 씁니다.)'}
         </pre>
         <div className="row wrap">
-          <button
-            className="btn"
-            onClick={() => actions.copy(meeting.summary ?? '', '요약을 복사했습니다.')}
-            data-testid="copy-summary"
-          >
+          <button className="btn" onClick={() => actions.copy(meeting.summary ?? '', '요약을 복사했습니다.')} data-testid="copy-summary">
             요약 복사
           </button>
-          <button
-            className="btn"
-            onClick={() => actions.copy(summaryPrompt, 'AI 요약 프롬프트를 복사했습니다. 게스트 웹에 붙여넣으세요.')}
-            data-testid="copy-summary-prompt"
-          >
-            AI 요약 프롬프트 복사
-          </button>
           {meeting.status !== 'ended' ? (
-            <button
-              className="btn"
-              onClick={() => {
-                actions.end();
-              }}
-              data-testid="end-from-summary"
-            >
+            <button className="btn" onClick={actions.end} data-testid="end-from-summary">
               회의 종료
             </button>
           ) : null}
         </div>
         <p className="hint">
-          위 요약은 앱의 규칙 엔진이 만든 초안입니다(AI가 쓴 것 아님). AI 요약을 원하면 프롬프트를 복사해 게스트 웹에
-          붙여넣고, 답변을 [답변 붙여넣기]로 등록하세요.
+          요약은 회의 마지막에 사회자(Gemini, 별도 호출)가 저장된 대화만 보고 쓴 글입니다. Worker에 닿지 못한 경우에는
+          앱이 기록만 발췌한 대체 요약이 들어가며, 그때는 머리에 그렇게 표시됩니다.
         </p>
-      </Sheet>
-
-      <Sheet title={`${target ? PARTICIPANTS[target].name : ''} 답변 붙여넣기`} open={sheet === 'paste'} onClose={() => setSheet(null)} testId="paste-sheet">
-        <p className="hint">
-          게스트 웹에서 받은 답변을 그대로 붙여넣으세요. 대상은 <b>{target ? PARTICIPANTS[target].name : '-'}</b>로 고정되고,
-          출처는 <b>수동 입력</b>으로 남습니다.
-        </p>
-        <textarea
-          className="textarea"
-          data-testid="paste-textarea"
-          value={pasteText}
-          onChange={(e) => setPasteText(e.target.value)}
-          placeholder="ChatGPT/Gemini 답변을 여기에 붙여넣기"
-          rows={8}
-        />
-        <button
-          className="btn primary wide"
-          data-testid="paste-submit"
-          onClick={() => {
-            if (!pasteText.trim()) return;
-            actions.register(pasteText, 'manual');
-            setPasteText('');
-            setSheet(null);
-          }}
-        >
-          답변 등록
-        </button>
       </Sheet>
 
       <Sheet
-        title="지식 저장소에 저장"
+        title="기억 저장소에 저장"
         open={sheet === 'saveMemory'}
         onClose={() => setSheet(null)}
         testId="save-memory-sheet"
@@ -701,13 +703,7 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
       </Sheet>
 
       <Sheet title="기억 저장소" open={sheet === 'memory'} onClose={() => setSheet(null)} testId="memory-sheet">
-        <MemorySheet
-          memories={memories}
-          topic={meeting.topic}
-          onAdd={actions.addMemory}
-          onDelete={actions.deleteMemory}
-          onImport={actions.importMemories}
-        />
+        <MemorySheet memories={memories} topic={meeting.topic} onAdd={actions.addMemory} onDelete={actions.deleteMemory} onImport={actions.importMemories} />
       </Sheet>
 
       <Sheet title="설정" open={sheet === 'settings'} onClose={() => setSheet(null)} testId="settings-sheet">
@@ -739,6 +735,8 @@ export function RoomScreen({ meeting, memories, settings, target, prompt, summar
           저장
         </button>
       </Sheet>
+
+      {externalSheet}
     </div>
   );
 }

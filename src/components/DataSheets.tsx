@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MemoryItem, Settings } from '../lib/types';
 import { MEMORY_STATUSES, MEMORY_TYPES } from '../lib/types';
 import { matchMemories } from '../lib/memory';
 import { formatDateTime } from '../lib/format';
+import { checkHealth, normalizeWorkerUrl } from '../lib/workerClient';
+import { MEETING_TUNING } from '../config/meeting';
 
 interface Props {
   settings: Settings;
@@ -15,6 +17,29 @@ export function SettingsSheet({ settings, onSave, onExportAll, onImportAll }: Pr
   const [draft, setDraft] = useState<Settings>(settings);
   const [importText, setImportText] = useState('');
   const [msg, setMsg] = useState('');
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => setDraft(settings), [settings]);
+
+  async function testConnection() {
+    setChecking(true);
+    setMsg('');
+    try {
+      const info = await checkHealth({ ...draft, workerUrl: normalizeWorkerUrl(draft.workerUrl) });
+      const ready = info.configured.groq && info.configured.gemini && info.configured.accessToken;
+      setMsg(
+        ready
+          ? `연결됨 · GPT-OSS ${info.models.gptoss} / Gemini ${info.models.gemini} / 사회자 ${info.models.moderator}`
+          : `Worker는 응답하지만 비밀키가 빠졌습니다 (Groq ${info.configured.groq ? 'O' : 'X'}, Gemini ${
+              info.configured.gemini ? 'O' : 'X'
+            }, 패스코드 설정 ${info.configured.accessToken ? 'O' : 'X'})`,
+      );
+    } catch (e) {
+      setMsg(e instanceof Error ? `연결 실패: ${e.message}` : '연결 실패');
+    } finally {
+      setChecking(false);
+    }
+  }
 
   return (
     <div className="stack">
@@ -37,59 +62,61 @@ export function SettingsSheet({ settings, onSave, onExportAll, onImportAll }: Pr
         />
       </label>
 
-      <div className="section-title">선택: 직접 API 연결</div>
+      <div className="section-title">자동 회의 연결 (Cloudflare Worker)</div>
       <p className="hint">
-        기본은 <b>수동 연결</b>입니다(0원). 아래에 본인 키를 넣고 자동 응답을 켜면 그 AI만 실제로 호출합니다. 키는 이
-        기기 브라우저(localStorage)에만 저장되고 서버로 보내지 않습니다. Pickle은 API 자동 호출 대상이 아닙니다.
+        API 키는 여기에 넣지 않습니다. 키는 Worker의 비밀값에만 있고, 이 앱은 <b>Worker 주소</b>와 <b>개인용 패스코드</b>만
+        저장합니다(이 브라우저 localStorage).
       </p>
       <label className="field">
-        <span>OpenAI API 키</span>
+        <span>Worker 주소</span>
         <input
-          data-testid="settings-openai-key"
-          type="password"
+          data-testid="settings-worker-url"
+          value={draft.workerUrl}
+          onChange={(e) => setDraft({ ...draft, workerUrl: e.target.value })}
+          placeholder="https://ai-roundtable.xxxx.workers.dev"
           autoComplete="off"
-          value={draft.apiKeys.openai}
-          onChange={(e) => setDraft({ ...draft, apiKeys: { ...draft.apiKeys, openai: e.target.value } })}
-          placeholder="sk-... (없으면 비워두세요)"
+          spellCheck={false}
         />
       </label>
       <label className="field">
-        <span>OpenAI 모델</span>
+        <span>개인용 접근 패스코드 (APP_ACCESS_TOKEN과 같은 값)</span>
         <input
-          value={draft.models.openai}
-          onChange={(e) => setDraft({ ...draft, models: { ...draft.models, openai: e.target.value } })}
-        />
-      </label>
-      <label className="field">
-        <span>Gemini API 키</span>
-        <input
-          data-testid="settings-gemini-key"
+          data-testid="settings-access-code"
           type="password"
+          value={draft.accessCode}
+          onChange={(e) => setDraft({ ...draft, accessCode: e.target.value })}
+          placeholder="Worker secret으로 넣은 값"
           autoComplete="off"
-          value={draft.apiKeys.gemini}
-          onChange={(e) => setDraft({ ...draft, apiKeys: { ...draft.apiKeys, gemini: e.target.value } })}
-          placeholder="AIza... (없으면 비워두세요)"
         />
       </label>
-      <label className="field">
-        <span>Gemini 모델</span>
-        <input
-          value={draft.models.gemini}
-          onChange={(e) => setDraft({ ...draft, models: { ...draft.models, gemini: e.target.value } })}
-        />
-      </label>
-      <label className="switch">
-        <input
-          type="checkbox"
-          data-testid="settings-auto-api"
-          checked={draft.autoApi}
-          onChange={(e) => setDraft({ ...draft, autoApi: e.target.checked })}
-        />
-        <span>API 키가 있는 AI는 자동으로 응답 받기 (기본 꺼짐)</span>
-      </label>
+      <p className="hint" data-testid="settings-budget">
+        회의는 <b>고정 라운드 제한 없이</b> 사회자가 끝을 판단할 때까지 이어진다. 멈추는 조건은 사용자 정지,
+        사회자의 마무리 판단, 같은 발언 반복 감지, 그리고 회의당 호출 예산 {MEETING_TUNING.maxCallsPerMeeting}회다
+        (무료 한도 보호용 안전장치).
+      </p>
+      <div className="row wrap">
+        <button className="btn" onClick={() => void testConnection()} disabled={checking} data-testid="settings-test">
+          {checking ? '확인 중…' : '연결 확인'}
+        </button>
+        <button
+          className="btn primary"
+          data-testid="settings-save"
+          onClick={() => {
+            onSave({ ...draft, workerUrl: normalizeWorkerUrl(draft.workerUrl), accessCode: draft.accessCode.trim() });
+            setMsg('저장했습니다.');
+          }}
+        >
+          저장
+        </button>
+      </div>
+      {msg ? (
+        <p className="hint" data-testid="settings-status">
+          {msg}
+        </p>
+      ) : null}
       <p className="hint">
-        자동 응답이 꺼져 있거나 키가 없으면 앱은 프롬프트만 만들어 복사해 줍니다. 실제 호출 없이 응답이 생기는 일은
-        없습니다.
+        무료 한도(Groq 30 RPM·1,000 RPD·8K TPM / Gemini 3.5 Flash-Lite 15 RPM·500 RPD 실측)에 닿으면 앱이 스스로 멈춥니다.
+        유료 전환은 하지 않습니다.
       </p>
 
       <div className="section-title">데이터</div>
@@ -118,22 +145,8 @@ export function SettingsSheet({ settings, onSave, onExportAll, onImportAll }: Pr
           }
         }}
       >
-        전체 JSON 가져오기
+        가져오기
       </button>
-
-      <div className="row">
-        <button
-          className="btn primary"
-          data-testid="settings-save"
-          onClick={() => {
-            onSave(draft);
-            setMsg('저장했습니다.');
-          }}
-        >
-          설정 저장
-        </button>
-      </div>
-      {msg ? <p className="hint ok" data-testid="settings-message">{msg}</p> : null}
     </div>
   );
 }
@@ -147,124 +160,95 @@ interface MemoryProps {
 }
 
 export function MemorySheet({ memories, topic, onAdd, onDelete, onImport }: MemoryProps) {
-  const [filter, setFilter] = useState<string>('전체');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [status, setStatus] = useState<MemoryItem['status']>('가설');
   const [type, setType] = useState<MemoryItem['type']>('사실');
   const [tags, setTags] = useState('');
   const [importText, setImportText] = useState('');
-  const [error, setError] = useState('');
-  const related = matchMemories(topic, memories, 50).map((r) => r.item.id);
-  const shown = memories
-    .filter((m) => (filter === '전체' ? true : m.status === filter))
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+  const [msg, setMsg] = useState('');
+
+  const related = topic ? matchMemories(topic, memories).map((r) => r.item.id) : [];
 
   return (
     <div className="stack">
       <p className="hint">
-        이 주제와 맞는 기억 <b>{related.length}건</b>을 대화 프롬프트에 자동으로 넣습니다. 상태 4종·유형 7종으로 나눠
-        저장하세요.
+        기억은 회의 주제와 겹치는 것만 골라 프롬프트에 넣습니다. ‘폐기된 정보’는 참고용으로만 쓰이고 점수가 낮습니다.
       </p>
-      <div className="chips">
-        {['전체', ...MEMORY_STATUSES].map((s) => (
-          <button key={s} className={`chip ${filter === s ? 'on' : ''}`} onClick={() => setFilter(s)}>
-            {s}
-          </button>
-        ))}
-      </div>
-      <div className="stack compact">
-        {shown.length === 0 ? <p className="hint">저장된 기억이 없습니다.</p> : null}
-        {shown.map((m) => (
-          <div className="memory-item" key={m.id} data-testid="memory-item">
-            <div className="memory-head">
-              <b>{m.title}</b>
-              <span className={`badge status-${MEMORY_STATUSES.indexOf(m.status)}`}>{m.status}</span>
-            </div>
-            <p>{m.body}</p>
-            <div className="memory-meta">
-              <span>{m.type}</span>
-              {m.tags.length ? <span>#{m.tags.join(' #')}</span> : null}
-              <span>{formatDateTime(m.updatedAt)}</span>
-              {related.includes(m.id) ? <span className="ok">이 주제 관련</span> : null}
-              <button className="link" onClick={() => onDelete(m.id)} data-testid="memory-delete">
-                삭제
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <ul className="memory-list">
+        {memories.length === 0 ? <li className="hint">저장된 기억이 없습니다.</li> : null}
+        {[...memories]
+          .sort((a, b) => b.updatedAt - a.updatedAt)
+          .map((m) => (
+            <li key={m.id} className={`memory-item ${related.includes(m.id) ? 'related' : ''}`}>
+              <div className="row between">
+                <b>{m.title}</b>
+                <button className="link danger" onClick={() => onDelete(m.id)} aria-label="기억 삭제">
+                  삭제
+                </button>
+              </div>
+              <p>{m.body}</p>
+              <p className="hint">
+                {m.status} · {m.type} · {formatDateTime(m.updatedAt)}
+              </p>
+            </li>
+          ))}
+      </ul>
 
-      <div className="section-title">새 기억 추가</div>
-      <input placeholder="제목" value={title} onChange={(e) => setTitle(e.target.value)} data-testid="memory-title" />
-      <textarea
-        className="textarea small"
-        placeholder="내용(근거·한계 포함)"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        data-testid="memory-body"
-      />
-      <div className="row">
-        <select value={status} onChange={(e) => setStatus(e.target.value as MemoryItem['status'])} data-testid="memory-status">
+      <div className="section-title">새 기억</div>
+      <input placeholder="제목" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <textarea placeholder="내용" rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
+      <div className="row wrap">
+        <select value={status} onChange={(e) => setStatus(e.target.value as MemoryItem['status'])}>
           {MEMORY_STATUSES.map((s) => (
             <option key={s}>{s}</option>
           ))}
         </select>
-        <select value={type} onChange={(e) => setType(e.target.value as MemoryItem['type'])} data-testid="memory-type">
+        <select value={type} onChange={(e) => setType(e.target.value as MemoryItem['type'])}>
           {MEMORY_TYPES.map((t) => (
             <option key={t}>{t}</option>
           ))}
         </select>
       </div>
-      <input placeholder="태그(쉼표)" value={tags} onChange={(e) => setTags(e.target.value)} data-testid="memory-tags" />
+      <input placeholder="태그(쉼표)" value={tags} onChange={(e) => setTags(e.target.value)} />
       <button
         className="btn primary"
-        data-testid="memory-add"
         onClick={() => {
           if (!title.trim()) {
-            setError('제목을 입력하세요.');
+            setMsg('제목을 입력하세요.');
             return;
           }
-          onAdd({
-            title,
-            body,
-            status,
-            type,
-            tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-          });
+          onAdd({ title, body, status, type, tags: tags.split(',').map((t) => t.trim()).filter(Boolean) });
           setTitle('');
           setBody('');
           setTags('');
-          setError('');
+          setMsg('추가했습니다.');
         }}
       >
         기억 추가
       </button>
-      {error ? <p className="hint warn">{error}</p> : null}
-
-      <div className="section-title">JSON 가져오기</div>
+      <div className="section-title">가져오기</div>
       <textarea
         className="textarea small"
-        placeholder='{"memories":[...]}'
+        placeholder="기억 JSON을 붙여넣기"
         value={importText}
         onChange={(e) => setImportText(e.target.value)}
-        data-testid="memory-import-text"
       />
       <button
         className="btn"
-        data-testid="memory-import"
         onClick={() => {
           try {
             onImport(importText);
             setImportText('');
-            setError('가져왔습니다.');
+            setMsg('가져왔습니다.');
           } catch (e) {
-            setError(e instanceof Error ? e.message : '가져오기 실패');
+            setMsg(e instanceof Error ? `실패: ${e.message}` : '실패');
           }
         }}
       >
-        기억 가져오기
+        JSON 가져오기
       </button>
+      {msg ? <p className="hint">{msg}</p> : null}
     </div>
   );
 }
