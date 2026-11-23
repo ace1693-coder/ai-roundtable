@@ -210,9 +210,9 @@ Service Worker 캐시는 `airt4-v2` 로 구캐시는 지우고 있었으나, 배
 | 항목 | 값 |
 |---|---|
 | 라이브 URL | https://ace1693-coder.github.io/ai-roundtable/ |
-| main 커밋 | `da1acef` |
-| gh-pages 배포 커밋 | `30d05b7` (da1acef 빌드 산출물) |
-| 서빙 번들 | `assets/index-B9XOQAkx.js` (217.88KB, gzip 73.68KB) · `assets/index-DGajKxzW.css` |
+| main 커밋 | `c0b024d` (기능 수정 `da1acef` + 안내 문구) |
+| gh-pages 배포 커밋 | `e4f05cd` (c0b024d 빌드 산출물) |
+| 서빙 번들 | `assets/index-9lAjRwaa.js` (217.89KB, gzip 73.69KB) · `assets/index-DGajKxzW.css` |
 | SW | `airt4-v3` (캐시는 `airt4-v3` 하나) |
 | 검증 스크립트 | `e2e/live_schema_check.py` · 원본 `e2e/live_schema_report.json` |
 | 스크린샷 | `downloads/ai-roundtable-live-A-new.png` · `-B-legacy.png` · `-C-missing-fields.png` · `-D-sw.png` |
