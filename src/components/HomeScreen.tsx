@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Meeting, MemoryItem } from '../lib/types';
+import type { Meeting, MemoryItem, Settings } from '../lib/types';
 import { analyzeTopic } from '../lib/topics';
 import { matchMemories } from '../lib/memory';
 import { formatDateTime } from '../lib/format';
@@ -10,6 +10,7 @@ import { Icon } from './Icon';
 interface Props {
   meetings: Meeting[];
   memories: MemoryItem[];
+  settings: Settings;
   onStart: (topic: string) => void;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
@@ -19,11 +20,12 @@ interface Props {
 
 const EXAMPLES = ['코팅 공정 불량 개선', '부업 수익 구조 점검', 'PWA 앱 배포 설계', '수면 습관 개선'];
 
-export function HomeScreen({ meetings, memories, onStart, onOpen, onDelete, onOpenSettings, onOpenMemories }: Props) {
+export function HomeScreen({ meetings, memories, settings, onStart, onOpen, onDelete, onOpenSettings, onOpenMemories }: Props) {
   const [topic, setTopic] = useState('');
   const [error, setError] = useState('');
   const analysis = analyzeTopic(topic);
   const related = matchMemories(topic, memories);
+  const configured = Boolean(settings.workerUrl.trim() && settings.accessCode.trim());
 
   return (
     <div className="home">
@@ -68,7 +70,7 @@ export function HomeScreen({ meetings, memories, onStart, onOpen, onDelete, onOp
               관련 기억 {related.length}건 자동 불러오기
             </span>
           </div>
-          {(['chatgpt', 'gemini', 'pickle'] as const).map((id) => (
+          {(['gptoss', 'gemini', 'moderator'] as const).map((id) => (
             <div className="role-row" key={id}>
               <Avatar id={id} size={26} />
               <span className="role-name">{PARTICIPANTS[id].name}</span>
@@ -92,8 +94,9 @@ export function HomeScreen({ meetings, memories, onStart, onOpen, onDelete, onOp
           회의방 만들기
         </button>
         <p className="hint">
-          기본은 <b>수동 연결</b>입니다. 앱이 프롬프트를 만들어 주면 ChatGPT·Gemini 웹에서 받은 답변을 붙여넣어 회의를
-          이어갑니다. 가짜 읽음·접속·입력 중 표시는 만들지 않습니다.
+          {configured
+            ? '회의방을 만들면 GPT-OSS → Gemini → 사회자 순서로 실제 API가 자동으로 토론합니다. 중간에 끼어들 수 있습니다.'
+            : '아직 Worker가 연결되지 않았습니다. 설정에서 Worker 주소와 개인용 패스코드를 넣어야 자동 회의가 시작됩니다.'}
         </p>
       </section>
 
@@ -118,7 +121,7 @@ export function HomeScreen({ meetings, memories, onStart, onOpen, onDelete, onOp
                         <span className={`state-dot state-${m.status}`} title={m.status} />
                       </div>
                       <div className="meeting-sub">
-                        {last ? `${last.authorId === 'me' ? '나' : PARTICIPANTS[last.authorId as 'chatgpt'].name}: ${last.text.slice(0, 40)}` : '발언 없음'}
+                        {last ? `${last.authorId === 'me' ? '나' : PARTICIPANTS[last.authorId as 'gptoss'].name}: ${last.text.slice(0, 40)}` : '발언 없음'}
                       </div>
                       <div className="meeting-meta">
                         <span>{formatDateTime(m.updatedAt)}</span>
@@ -147,7 +150,7 @@ export function HomeScreen({ meetings, memories, onStart, onOpen, onDelete, onOp
 
       <footer className="home-foot">
         <p>
-          AI Roundtable 3.0 · 정적 PWA · 데이터는 이 기기에만 저장(localStorage)
+          AI Roundtable 4.0 · 무료 API 자동 회의 · 데이터는 이 기기에만 저장(localStorage)
         </p>
         <p className="hint">
           홈 화면에 추가하면 앱처럼 열립니다. 오프라인에서도 저장된 회의를 볼 수 있습니다.

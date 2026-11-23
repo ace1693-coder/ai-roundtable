@@ -766,11 +766,11 @@ select:focus {
   border-radius: 50%;
   display: inline-block;
 }
-.dot-chatgpt {
-  color: #3ddcae;
+.dot-gptoss {
+  color: #ff8a73;
 }
-.mention-dot.dot-chatgpt {
-  background: var(--emerald);
+.mention-dot.dot-gptoss {
+  background: #f55036;
 }
 .dot-gemini {
   color: #8ab4f8;
@@ -778,10 +778,10 @@ select:focus {
 .mention-dot.dot-gemini {
   background: #4285f4;
 }
-.dot-pickle {
+.dot-moderator {
   color: #ffa64d;
 }
-.mention-dot.dot-pickle {
+.mention-dot.dot-moderator {
   background: var(--orange);
 }
 .dot-all {
@@ -1036,3 +1036,109 @@ select:focus {
   text-decoration: none;
   opacity: 0.9;
 }
+
+/* ---------------- 자동 회의 상태 표시 ---------------- */
+.status-chips {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #0f1217;
+  scrollbar-width: none;
+}
+.status-chips::-webkit-scrollbar {
+  display: none;
+}
+.chip-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--sub);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.chip-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5a6472;
+  display: inline-block;
+}
+.chip-status.st-thinking {
+  color: #ffd166;
+  border-color: #4a3f1a;
+}
+.chip-status.st-thinking .dot {
+  background: #ffd166;
+  animation: dot-pulse 1s ease-in-out infinite;
+}
+.chip-status.st-done .dot {
+  background: #4ade80;
+}
+.chip-status.st-error {
+  color: #ff8a80;
+  border-color: #4a2222;
+}
+.chip-status.st-error .dot {
+  background: #ff6b6b;
+}
+@keyframes dot-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.model-line {
+  display: block;
+  font-size: 9.5px;
+  color: #7c8694;
+  margin-top: 3px;
+  letter-spacing: 0.01em;
+}
+.turn-bar.running {
+  background: #131a16;
+  border-top-color: #22331f;
+}
+.turn-bar.running .turn-actions {
+  grid-template-columns: minmax(0, 1fr);
+}
+.thinking-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.thinking-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--yellow);
+  animation: dot-bounce 1s infinite;
+}
+.thinking-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.thinking-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes dot-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+/* 참가자 켜기/끄기 토글 */
+.participant.off { opacity: 0.55; }
+.participant.off b { text-decoration: line-through; }
+.btn.small { padding: 6px 10px; font-size: 12px; min-height: 30px; }
+.boot { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: var(--muted, #9ca3af); font-size: 14px; }
