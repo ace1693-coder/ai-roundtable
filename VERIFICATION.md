@@ -118,3 +118,18 @@
 
 미검증
 - 사용자 실제 폰 인앱 브라우저에서의 최종 확인(웹뷰 종류·버전 의존). 새 SW 가 구캐시를 지우므로 재방문 시 해소되는지 사용자 확인 필요.
+
+### 6-1. 라이브 재배포 검증 (2026-11-23 17:5x)
+
+| 항목 | 값 |
+|---|---|
+| main 커밋 | `fc3e78e` (검은 화면 근본 수정) |
+| gh-pages 배포 커밋 | `a39e9f0` |
+| 서빙 번들 | `assets/index-Bi7oZEmQ.js` · `assets/index-DGajKxzW.css` · `sw.js` VERSION `airt4-v2` |
+| 검증 스크립트 | `e2e/live_black_screen_check.py` (390×844 · Android UA) |
+| 스크린샷 | `downloads/ai-roundtable-mobile-fixed.png` · `downloads/ai-roundtable-live-storage-blocked.png` |
+
+- 정상 로드: `.home` 렌더, `#root` 콘텐츠 정상, 콘솔·페이지 오류 0, 실패 요청 0, 서비스워커 제어 중(캐시 `airt4-v2` 하나).
+- localStorage 차단 상태(수정 전 검은 화면이던 조건): `.home` 렌더, 오류 0 — 수정이 라이브에서도 유효함.
+- 새로고침 3회 반복 시 추가 자동 새로고침 없음(무한 새로고침 없음) 확인.
+
