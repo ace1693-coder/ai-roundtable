@@ -1,4 +1,4 @@
-/* AI Roundtable 3.0 — 앱셸 캐시 서비스워커
+/* AI Roundtable 4.0 — 앱셸 캐시 서비스워커
    상대경로만 쓴다(GitHub Pages 하위 경로 /ai-roundtable/ 배포 대응).
    - 탐색 요청: 네트워크 우선, 실패 시 캐시된 index.html
    - 정적 자산: 캐시 우선, 없으면 네트워크 후 캐시
