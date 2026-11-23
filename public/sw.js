@@ -1,10 +1,10 @@
-/* AI Roundtable 4.0 — 앱셸 캐시 서비스워커 (v2)
+/* AI Roundtable 4.0 — 앱셸 캐시 서비스워커 (v3)
    상대경로만 쓴다(GitHub Pages 하위 경로 /ai-roundtable/ 배포 대응).
    - 탐색(HTML): 네트워크 우선(HTTP 캐시도 건너뜀), 실패 시에만 캐시된 index.html
    - 정적 자산: stale-while-revalidate(캐시를 먼저 주고 뒤에서 새 파일로 교체)
    - 캐시 이름에 버전을 넣고 activate 에서 이전 캐시를 전부 지운다.
    배포 후 예전 index.html 과 새 JS/CSS 가 섞여 검은 화면이 되던 문제(2026-11-23)의 재발 방지. */
-const VERSION = 'airt4-v2';
+const VERSION = 'airt4-v3';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 const HTML_KEY = './index.html';
 

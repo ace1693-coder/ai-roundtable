@@ -281,7 +281,6 @@
       "turnIndex": 12,
       "callIndex": 12,
       "participants": [
-        "gptoss",
         "gemini",
         "moderator"
       ],

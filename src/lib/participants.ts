@@ -63,12 +63,12 @@ export const PARTICIPANTS: Record<ParticipantId, ParticipantMeta> = {
 export function authorName(author: MessageAuthor, displayName: string): string {
   if (author === 'system') return '앱';
   if (author === 'me') return displayName || '나';
-  return PARTICIPANTS[author].name;
+  return PARTICIPANTS[author]?.name ?? String(author);
 }
 
 export function authorColor(author: MessageAuthor): string {
   if (author === 'system') return '#6b7280';
-  return PARTICIPANTS[author].color;
+  return PARTICIPANTS[author]?.color ?? '#6b7280';
 }
 
 export const SOURCE_LABEL: Record<MessageSource, string> = {

@@ -26,13 +26,15 @@ export function SettingsSheet({ settings, onSave, onExportAll, onImportAll }: Pr
     setMsg('');
     try {
       const info = await checkHealth({ ...draft, workerUrl: normalizeWorkerUrl(draft.workerUrl) });
-      const ready = info.configured.groq && info.configured.gemini && info.configured.accessToken;
+      // Worker 가 구버전이라 일부 필드가 빠져도 화면이 죽지 않게 값을 하나하나 확인한다.
+      const ready = info.configured?.groq === true && info.configured?.gemini === true && info.configured?.accessToken === true;
+      const modelOf = (k: 'gptoss' | 'gemini' | 'moderator') => info.models?.[k] ?? '미표기';
       setMsg(
         ready
-          ? `연결됨 · GPT-OSS ${info.models.gptoss} / Gemini ${info.models.gemini} / 사회자 ${info.models.moderator}`
-          : `Worker는 응답하지만 비밀키가 빠졌습니다 (Groq ${info.configured.groq ? 'O' : 'X'}, Gemini ${
-              info.configured.gemini ? 'O' : 'X'
-            }, 패스코드 설정 ${info.configured.accessToken ? 'O' : 'X'})`,
+          ? `연결됨 · GPT-OSS ${modelOf('gptoss')} / Gemini ${modelOf('gemini')} / 사회자 ${modelOf('moderator')}`
+          : `Worker는 응답하지만 비밀키가 빠졌습니다 (Groq ${info.configured?.groq ? 'O' : 'X'}, Gemini ${
+              info.configured?.gemini ? 'O' : 'X'
+            }, 패스코드 설정 ${info.configured?.accessToken ? 'O' : 'X'})`,
       );
     } catch (e) {
       setMsg(e instanceof Error ? `연결 실패: ${e.message}` : '연결 실패');

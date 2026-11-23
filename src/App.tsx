@@ -81,6 +81,8 @@ export default function App() {
   }));
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState('');
+  /** 저장된 데이터를 읽지 못했으면 자동 저장을 멈춘다(빈 값으로 기존 기록을 덮어쓰지 않도록). */
+  const saveBlockedRef = useRef(false);
   const [homeSheet, setHomeSheet] = useState<'settings' | 'memory' | null>(null);
   const [turnStatus, setTurnStatus] = useState<Record<AiId, TurnStatus>>({ gptoss: 'idle', gemini: 'idle', moderator: 'idle' });
   const [running, setRunning] = useState(false);
@@ -99,7 +101,7 @@ export default function App() {
     dataRef.current = data;
   }, [data]);
 
-  // 처음 한 번: IndexedDB에서 회의·기억을 읽고, 없으면 예전 localStorage 값을 옮긴다.
+  // 처음 한 번: IndexedDB에서 회의·기억을 읽고(정규화 포함), 없으면 예전 localStorage 값을 옮긴다.
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -108,8 +110,17 @@ export default function App() {
         const legacy = collectLegacyData();
         const meetings = snapshot.meetings.length ? snapshot.meetings : legacy.meetings;
         const memories = snapshot.memories.length ? snapshot.memories : legacy.memories;
-        if (!snapshot.migrated && (legacy.meetings.length || legacy.memories.length)) {
+        const fromLegacy = !snapshot.meetings.length && legacy.meetings.length > 0;
+        if (snapshot.readFailed) {
+          saveBlockedRef.current = true;
+          console.warn('[AI Roundtable] 저장된 회의를 읽지 못했습니다. 기존 기록 보호를 위해 자동 저장을 멈춥니다.');
+        } else if (!snapshot.skipped && (fromLegacy || snapshot.repaired > 0 || !snapshot.migrated)) {
+          // 정규화된 값으로 한 번 다시 써서 다음 실행부터는 복구 과정이 필요 없게 한다.
+          // (레코드를 지우는 것이 아니라 빠진 필드를 채운 같은 기록을 다시 저장하는 것이다.)
           await saveWorkspace({ meetings, memories });
+          if (snapshot.repaired > 0 || fromLegacy) {
+            console.info(`[AI Roundtable] 저장된 회의 ${meetings.length}건을 새 스키마로 복구했습니다.`);
+          }
         }
         if (!alive) return;
         const activeId = loadActiveMeetingId();
@@ -119,8 +130,10 @@ export default function App() {
           memories,
           activeMeetingId: activeId && meetings.some((m) => m.id === activeId) ? activeId : null,
         }));
+        if (snapshot.readFailed) showToast('저장된 기록을 읽지 못했습니다. 기존 기록 보호를 위해 자동 저장을 잠시 멈췄습니다.');
       } catch (error) {
         // 저장소를 전혀 쓸 수 없는 브라우저에서도 빈 상태로 앱이 열려야 한다(검은 화면 방지).
+        saveBlockedRef.current = true;
         console.warn('[AI Roundtable] 저장된 데이터를 읽지 못했습니다.', error);
       } finally {
         if (alive) setReady(true);
@@ -140,7 +153,7 @@ export default function App() {
   }, [ready, data.activeMeetingId]);
   // 회의·기억은 IndexedDB에 저장한다(디바운스). 실패해도 화면은 계속 동작한다.
   useEffect(() => {
-    if (!ready) return undefined;
+    if (!ready || saveBlockedRef.current) return undefined;
     const timer = window.setTimeout(() => {
       void saveWorkspace({ meetings: data.meetings, memories: data.memories });
     }, 400);
@@ -253,7 +266,7 @@ export default function App() {
     async (meeting: Meeting, reason: EndedReason, opts: { forceSummary?: boolean } = {}) => {
       const settings = dataRef.current.settings;
       const canSummarize =
-        meeting.enabledAi.moderator !== false &&
+        meeting.enabledAi?.moderator !== false &&
         (meeting.callCount ?? 0) < callBudget() &&
         isWorkerConfigured(settings) &&
         (opts.forceSummary || !meeting.summary);
@@ -378,7 +391,7 @@ export default function App() {
       !still ||
       still.status !== 'active' ||
       !still.auto ||
-      still.enabledAi[plan.speaker] === false
+      still.enabledAi?.[plan.speaker] === false
     ) {
       setTurnStatus((s) => ({ ...s, [plan.speaker]: 'idle' }));
       return;
@@ -399,7 +412,7 @@ export default function App() {
         text: scrubbed.text || res.text,
         createdAt: Date.now(),
         source: 'api',
-        roleAtTime: meeting.roles[plan.speaker],
+        roleAtTime: meeting.roles?.[plan.speaker] ?? PARTICIPANTS[plan.speaker].name,
         model: res.model,
         provider: res.provider,
         latencyMs: res.latencyMs || Date.now() - startedAt,
@@ -629,8 +642,9 @@ export default function App() {
     toggleAi(id: AiId) {
       const meeting = dataRef.current.meetings.find((m) => m.id === dataRef.current.activeMeetingId);
       if (!meeting) return;
-      const on = meeting.enabledAi[id] !== false;
-      const enabledAi = { ...meeting.enabledAi, [id]: !on };
+      const current = meeting.enabledAi ?? { gptoss: true, gemini: true, moderator: true };
+      const on = current[id] !== false;
+      const enabledAi = { ...current, [id]: !on };
       const changes: Partial<Meeting> = { enabledAi };
       // 끄는 AI가 다음 발언자로 잡혀 있으면 그 지목을 지우고 사회자에게 다시 묻는다.
       if (!on === false && meeting.nextSpeaker === id) changes.nextSpeaker = undefined;

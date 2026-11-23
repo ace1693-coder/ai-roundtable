@@ -3,7 +3,7 @@ import type { Meeting, MemoryItem, Settings } from '../lib/types';
 import { analyzeTopic } from '../lib/topics';
 import { matchMemories } from '../lib/memory';
 import { formatDateTime } from '../lib/format';
-import { PARTICIPANTS } from '../lib/participants';
+import { PARTICIPANTS, authorName } from '../lib/participants';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 
@@ -121,7 +121,7 @@ export function HomeScreen({ meetings, memories, settings, onStart, onOpen, onDe
                         <span className={`state-dot state-${m.status}`} title={m.status} />
                       </div>
                       <div className="meeting-sub">
-                        {last ? `${last.authorId === 'me' ? '나' : PARTICIPANTS[last.authorId as 'gptoss'].name}: ${last.text.slice(0, 40)}` : '발언 없음'}
+                        {last ? `${authorName(last.authorId, '나')}: ${last.text.slice(0, 40)}` : '발언 없음'}
                       </div>
                       <div className="meeting-meta">
                         <span>{formatDateTime(m.updatedAt)}</span>

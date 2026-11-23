@@ -7,6 +7,9 @@ import { matchMemories } from './memory';
 import { MEETING_TUNING, callBudget } from '../config/meeting';
 import { REPEAT_THRESHOLD, similarity } from './repetition';
 
+/** roles 가 비어 있는 예전 기록이 와도 프롬프트 조립이 죽지 않게 한다. */
+const GENERAL_ROLES: Record<AiId, string> = { gptoss: '전략 분석가', gemini: '검증 담당', moderator: '사회자' };
+
 /**
  * 회의 진행 규칙.
  *
@@ -203,7 +206,7 @@ export function buildTurnRequest(
     domain: m.domain,
     turnIndex: plan.turnIndex,
     maxTurns: callBudget(),
-    roles: m.roles,
+    roles: m.roles ?? GENERAL_ROLES,
     thinking: thinking.map((t) => ({ title: t.title, instruction: t.instruction })),
     memories: related.map((x) => ({ title: clip(x.title, 80), body: clip(x.body, 260), status: x.status })),
     transcript: buildTranscript(m, displayName),

@@ -1,15 +1,10 @@
-import type { Domain, Meeting, MemoryItem, MemoryStatus, MemoryType, Settings } from './types';
+import type { Meeting, MemoryItem, MemoryStatus, MemoryType, Settings } from './types';
 import { MEMORY_STATUSES, MEMORY_TYPES } from './types';
 import { wordTokens } from './repetition';
 import { MEETING_TUNING } from '../config/meeting';
+import { normalizeMeeting } from './schema';
 
-/** 설정 화면에서 고를 수 있는 AI 발언 수. 저장된 값이 이 밖이면 가까운 값으로 맞춘다. */
-export const MAX_TURN_CHOICES: readonly number[] = [3, 5, 7];
-
-export function normalizeMaxTurns(raw: unknown): number {
-  const n = typeof raw === 'number' && Number.isFinite(raw) ? Math.round(raw) : MEETING_TUNING.defaultMaxTurns;
-  return MAX_TURN_CHOICES.reduce((best, c) => (Math.abs(c - n) < Math.abs(best - n) ? c : best), MAX_TURN_CHOICES[1]);
-}
+export { MAX_TURN_CHOICES, normalizeMaxTurns } from './turns';
 
 export function newId(prefix: string): string {
   const rand = Math.random().toString(36).slice(2, 8);
@@ -130,46 +125,10 @@ export function parseMeetingsImport(raw: string): Meeting[] {
     if (!isObj(row)) throw new Error(`${i + 1}번째 회의가 객체가 아닙니다.`);
     if (typeof row.title !== 'string' || !row.title.trim()) throw new Error(`${i + 1}번째 회의의 제목이 비었습니다.`);
     if (!Array.isArray(row.messages)) throw new Error(`${i + 1}번째 회의에 messages 배열이 없습니다.`);
-    const roles = isObj(row.roles) ? row.roles : {};
-    return {
-      id: typeof row.id === 'string' && row.id ? row.id : newId('mt'),
-      title: row.title.trim(),
-      topic: typeof row.topic === 'string' ? row.topic : row.title.trim(),
-      domain: (['manufacturing', 'business', 'appdev', 'health', 'general'] as Domain[]).includes(row.domain as Domain)
-        ? (row.domain as Domain)
-        : 'general',
-      createdAt: typeof row.createdAt === 'number' ? row.createdAt : Date.now(),
-      updatedAt: typeof row.updatedAt === 'number' ? row.updatedAt : Date.now(),
-      roles: {
-        // 예전 버전(chatgpt/pickle)으로 저장된 회의도 새 참가자 이름으로 옮긴다.
-        gptoss: pickRole(roles, 'gptoss', 'chatgpt', '전략 분석가'),
-        gemini: pickRole(roles, 'gemini', 'gemini', '검증 담당'),
-        moderator: pickRole(roles, 'moderator', 'pickle', '사회자'),
-      },
-      maxTurns: normalizeMaxTurns(row.maxTurns),
-      auto: row.auto !== false,
-      status: row.status === 'paused' || row.status === 'ended' ? row.status : 'active',
-      messages: row.messages as Meeting['messages'],
-      queue: Array.isArray(row.queue) ? (row.queue as Meeting['queue']) : [],
-      directiveSentId: typeof row.directiveSentId === 'string' ? row.directiveSentId : undefined,
-      enabledAi: {
-        gptoss: (row.enabledAi as Meeting['enabledAi'])?.gptoss !== false,
-        gemini: (row.enabledAi as Meeting['enabledAi'])?.gemini !== false,
-        moderator: (row.enabledAi as Meeting['enabledAi'])?.moderator !== false,
-      },
-      nextSpeaker:
-        row.nextSpeaker === 'gptoss' || row.nextSpeaker === 'gemini' || row.nextSpeaker === 'moderator' || row.nextSpeaker === 'done'
-          ? row.nextSpeaker
-          : undefined,
-      awaitingDecision: row.awaitingDecision !== false,
-      lastDecision: (row.lastDecision as Meeting['lastDecision']) ?? undefined,
-      callCount: typeof row.callCount === 'number' && row.callCount >= 0 ? row.callCount : 0,
-      endedReason: typeof row.endedReason === 'string' ? (row.endedReason as Meeting['endedReason']) : undefined,
-      lastSpeaker: typeof row.lastSpeaker === 'string' ? (row.lastSpeaker as Meeting['lastSpeaker']) : undefined,
-      usedMemoryIds: Array.isArray(row.usedMemoryIds) ? row.usedMemoryIds.filter((x): x is string => typeof x === 'string') : [],
-      repeatWarnings: typeof row.repeatWarnings === 'number' ? row.repeatWarnings : 0,
-      summary: typeof row.summary === 'string' ? row.summary : undefined,
-    };
+    // 예전 버전(chatgpt/pickle, enabledAi 없음)으로 저장된 회의도 읽을 수 있는 형태로 정규화한다.
+    const meeting = normalizeMeeting(row, i);
+    if (!meeting) throw new Error(`${i + 1}번째 회의를 읽을 수 없습니다.`);
+    return meeting;
   });
 }
 
@@ -180,11 +139,3 @@ export const DEFAULT_SETTINGS: Settings = {
   accessCode: '',
   maxTurns: MEETING_TUNING.defaultMaxTurns,
 };
-
-/** 새 키가 없으면 예전 키(chatgpt/pickle)에서 역할명을 가져온다. */
-function pickRole(roles: Record<string, unknown>, key: string, legacy: string, fallback: string): string {
-  const v = roles[key];
-  if (typeof v === 'string' && v) return v;
-  const old = roles[legacy];
-  return typeof old === 'string' && old ? old : fallback;
-}

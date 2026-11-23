@@ -1,0 +1,338 @@
+{
+  "scenarios": [
+    {
+      "name": "1. 데이터 없는 새 사용자 — 첫 화면·회의 생성·새로고침 유지",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면(.home)이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "회의방이 열렸다",
+          "ok": true
+        },
+        {
+          "check": "보낸 메시지가 보인다",
+          "ok": true
+        },
+        {
+          "check": "새로고침 후에도 회의방·메시지가 남는다",
+          "ok": true
+        },
+        {
+          "check": "참가자 목록에 3명이 나온다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "새 사용자 테스트 회의 |  | 참가자 4명 · AI 발언 0 · 호출 0/20 · 일시정지 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 | 오늘 | 나 | 첫 질문입니다 | 출처: 사용자 | 오후 06:45 | Worker 연결 필요 | 배포한 Worker URL과 개인용 패스코드를 넣으면 자동 회의가 시작됩니다. | 설정 열기 | @GPT-OSS | @Gemini | @사회자"
+    },
+    {
+      "name": "2. 3.0 저장 데이터 사용자 — 마이그레이션·기존 회의 열기",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "예전 회의가 목록에 나온다",
+          "ok": true
+        },
+        {
+          "check": "작성자 이름이 새 참가자로 표시된다",
+          "ok": true
+        },
+        {
+          "check": "기존 회의방이 열린다",
+          "ok": true
+        },
+        {
+          "check": "예전 발언 본문이 보존됐다",
+          "ok": true
+        },
+        {
+          "check": "참가자 목록이 정상 표시된다",
+          "ok": true
+        },
+        {
+          "check": "예전 역할명이 참가자 목록에 보인다",
+          "ok": true
+        },
+        {
+          "check": "3.0 요약문이 보존됐다",
+          "ok": true
+        },
+        {
+          "check": "IndexedDB 로 옮긴 기록에 enabledAi 가 채워졌다",
+          "ok": true
+        },
+        {
+          "check": "예전 localStorage 원본도 그대로 남아 있다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "3.0 코팅 불량 회의 |  | 참가자 4명 · AI 발언 2 · 호출 0/20 · 종료 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 | 어제 | GPT-OSS | · 공정혁신 전문가 | 3.0 첫 발언 — 온도 편차부터 보자 | 출처: 실제 API | 오후 05:45 | 사회자 | · 생산성·원가절감 사회자 | 3.0 사회자 — 기록 주기를 정하자 | 출처: 실제 API | 오"
+    },
+    {
+      "name": "3. enabledAi(중첩 객체) 누락 회의 — 장애 지점 복구",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "회의방이 열린다",
+          "ok": true
+        },
+        {
+          "check": "참가자 목록(장애 지점)이 정상 표시된다",
+          "ok": true
+        },
+        {
+          "check": "빠진 enabledAi 가 채워져 저장됐다",
+          "ok": true
+        },
+        {
+          "check": "Worker 미설정 안내가 나온다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "필드 빠진 회의 |  | 참가자 4명 · AI 발언 1 · 호출 0/20 · 대기 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 | 오늘 | GPT-OSS | · 전략 분석가 | GPT-OSS 발언 — 이 방이 예전에 죽던 지점 | 출처: 실제 API | 오후 06:38 | Worker 연결 필요 | 배포한 Worker URL과 개인용 패스코드를 넣으면 자동 회의가 시작"
+    },
+    {
+      "name": "4. localStorage 차단 환경",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "회의방이 열린다",
+          "ok": true
+        },
+        {
+          "check": "메시지를 보낼 수 있다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "차단 환경 회의 |  | 참가자 4명 · AI 발언 0 · 호출 0/20 · 일시정지 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 | 오늘 | 나 | 차단 상태에서도 입력 | 출처: 사용자 | 오후 06:45 | Worker 연결 필요 | 배포한 Worker URL과 개인용 패스코드를 넣으면 자동 회의가 시작됩니다. | 설정 열기 | @GPT-OSS | @Gemini | @사회자"
+    },
+    {
+      "name": "5. 깨진 JSON 설정·회의 데이터",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "회의를 만들 수 있다",
+          "ok": true
+        },
+        {
+          "check": "새로고침 후 회의가 유지된다",
+          "ok": true
+        },
+        {
+          "check": "설정이 기본값(이름=나, Worker 빈값)으로 복구됐다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "AI 단체 채팅 회의 |  | AI Roundtable | 새 회의 | 코팅 공정 불량 개선 | 부업 수익 구조 점검 | PWA 앱 배포 설계 | 수면 습관 개선 | 주제 분석 · 일반 | 관련 기억 0건 자동 불러오기 | GPT-OSS | · 전략 분석가 | Gemini | · 검증 담당 | 사회자 | · 사회자 | 회의방 만들기 |  | 아직 Worker가 연결되지 않았습니다. 설정에서 Worker 주소와 개인용 패"
+    },
+    {
+      "name": "6. 구버전 Service Worker(airt3-v1) 잔존",
+      "ok": true,
+      "rows": [
+        {
+          "check": "구캐시 airt3-v1 이 삭제됐다",
+          "ok": true
+        },
+        {
+          "check": "현재 SW 버전이 airt4 이상이다",
+          "ok": true
+        },
+        {
+          "check": "첫 화면·회의방이 정상이다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "구워커 환경 회의 |  | 참가자 4명 · AI 발언 0 · 호출 0/20 · 일시정지 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 |  | 회의방이 열렸습니다. |  | 질문을 입력하면 GPT-OSS → Gemini → 사회자 순서로 실제 API가 답합니다. 중간에 끼어들면 그 말이 다음 발언에 최우선으로 반영됩니다. |  | Worker 연결 설정 | Worke"
+    },
+    {
+      "name": "7. Worker/API 키 미연결 — 모델 '미연결' 표시",
+      "ok": true,
+      "rows": [
+        {
+          "check": "회의방이 열린다",
+          "ok": true
+        },
+        {
+          "check": "상단 칩에 미연결이 표시된다",
+          "ok": true
+        },
+        {
+          "check": "참가자 목록에 미연결이 표시된다",
+          "ok": true
+        },
+        {
+          "check": "Worker 미연결 안내 바가 보인다",
+          "ok": true
+        },
+        {
+          "check": "연결 확인이 실패를 알려 준다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "Worker 미연결 회의 |  | 참가자 4명 · AI 발언 0 · 호출 0/20 · 일시정지 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 |  | 회의방이 열렸습니다. |  | 질문을 입력하면 GPT-OSS → Gemini → 사회자 순서로 실제 API가 답합니다. 중간에 끼어들면 그 말이 다음 발언에 최우선으로 반영됩니다. |  | Worker 연결 설정 | W"
+    },
+    {
+      "name": "8. Android Chrome 390×844 — 전체 흐름",
+      "ok": true,
+      "rows": [
+        {
+          "check": "뷰포트가 390×844 이다",
+          "ok": true
+        },
+        {
+          "check": "기존 회의방이 열린다",
+          "ok": true
+        },
+        {
+          "check": "대화 검색이 동작한다",
+          "ok": true
+        },
+        {
+          "check": "기억 저장소 시트가 열린다",
+          "ok": true
+        },
+        {
+          "check": "새로고침 후에도 회의가 유지된다",
+          "ok": true
+        },
+        {
+          "check": "추가한 사용자 발언이 남아 있다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "body": "3.0 진행 중이던 회의 |  | 참가자 4명 · AI 발언 2 · 호출 0/20 · 대기 |  | GPT-OSS · 미연결 | Gemini · 미연결 | 사회자 · 미연결 | 어제 | GPT-OSS | · 공정혁신 전문가 | 3.0 첫 발언 — 온도 편차부터 보자 | 출처: 실제 API | 오후 05:45 | 사회자 | · 생산성·원가절감 사회자 | 3.0 사회자 — 기록 주기를 정하자 | 출처: 실제 API | "
+    }
+  ],
+  "passed": 8,
+  "failed": 0
+}

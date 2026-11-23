@@ -12,7 +12,7 @@ const SIZES = { sm: 26, md: 36, lg: 48 };
 
 /** 각 참가자의 정체성이 한눈에 구분되도록 인라인 SVG로 그린다(외부 이미지·로고 파일 의존 없음). */
 export function Avatar({ id, size = SIZES.md, emoji, className }: Props) {
-  const meta = PARTICIPANTS[id];
+  const meta = PARTICIPANTS[id] ?? PARTICIPANTS.me;
   const grad = `grad-${id}`;
   const dim = Math.max(20, size);
   const r = dim / 2;

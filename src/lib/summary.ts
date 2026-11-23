@@ -1,6 +1,6 @@
 import type { Meeting } from './types';
 import { AI_IDS } from './types';
-import { PARTICIPANTS } from './participants';
+import { authorName, PARTICIPANTS } from './participants';
 import { formatDateTime } from './format';
 import { aiMessages } from './meetingEngine';
 
@@ -22,7 +22,7 @@ export function buildLocalSummary(meeting: Meeting): string {
     lastUser ? `마지막 사용자 요청: "${lastUser.text.replace(/\s+/g, ' ').slice(0, 200)}"` : '사용자 발언: 없음',
     '',
     '최근 AI 발언 발췌:',
-    ...(recent.length ? recent.map((m) => `- ${PARTICIPANTS[m.authorId as 'gptoss'].name}: ${m.text.replace(/\s+/g, ' ').slice(0, 120)}`) : ['- (없음)']),
+    ...(recent.length ? recent.map((m) => `- ${authorName(m.authorId, '나')}: ${m.text.replace(/\s+/g, ' ').slice(0, 120)}`) : ['- (없음)']),
     '',
     '결론·합의는 위 발췌에 근거가 있을 때만 읽어야 한다. AI 사회자의 최종 정리를 받으려면 Worker 연결을 확인하고 회의를 다시 이어가라.',
   ].join('\n');

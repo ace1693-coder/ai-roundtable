@@ -162,7 +162,7 @@ export function RoomScreen({
   const roleOf = (m: ChatMessage) => {
     if (m.authorId === 'system') return '';
     if (m.authorId === 'me') return '';
-    return m.roleAtTime || meeting.roles[m.authorId];
+    return m.roleAtTime || meeting.roles?.[m.authorId] || '';
   };
 
   return (
@@ -193,7 +193,7 @@ export function RoomScreen({
       <div className="status-chips" data-testid="status-chips">
         {AI_IDS.map((id) => (
           <span key={id} className={`chip-status st-${turnStatus[id]} dot-${id}`} data-testid={`status-${id}`}>
-            <i className="dot" /> {PARTICIPANTS[id].name} · {STATUS_TEXT[turnStatus[id]]}
+            <i className="dot" /> {PARTICIPANTS[id]?.name ?? id} · {workerReady ? STATUS_TEXT[turnStatus[id]] : '미연결'}
           </span>
         ))}
       </div>
@@ -254,7 +254,7 @@ export function RoomScreen({
                 <div className="msg-body">
                   {!grouped && !isSystem ? (
                     <div className="msg-meta">
-                      <span className={`msg-name name-${m.authorId}`}>{aiAuthor ? PARTICIPANTS[aiAuthor].name : displayName}</span>
+                      <span className={`msg-name name-${m.authorId}`}>{aiAuthor ? authorName(aiAuthor, displayName) : displayName}</span>
                       {roleOf(m) ? (
                         <span className="msg-role" data-testid="msg-role">
                           · {roleOf(m)}
@@ -545,16 +545,17 @@ export function RoomScreen({
       <Sheet title="참가자" open={sheet === 'participants'} onClose={() => setSheet(null)} testId="participants-sheet">
         <ul className="participant-list">
           {AI_IDS.map((id) => {
-            const on = meeting.enabledAi[id] !== false;
+            const on = meeting.enabledAi?.[id] !== false;
             return (
               <li key={id} className={`participant${on ? '' : ' off'}`} data-testid="participant-item" data-ai={id} data-on={on ? '1' : '0'}>
                 <Avatar id={id} size={40} />
                 <div>
                   <b>
-                    {PARTICIPANTS[id].name} <span className="role">· {meeting.roles[id]}</span>
+                    {PARTICIPANTS[id]?.name ?? id} <span className="role">· {meeting.roles?.[id] ?? '역할 미지정'}</span>
                   </b>
                   <p className="hint">
-                    {PARTICIPANTS[id].model} · {PARTICIPANTS[id].provider} · {on ? STATUS_TEXT[turnStatus[id]] : '꺼짐(호출 안 함)'}
+                    {PARTICIPANTS[id]?.model} · {PARTICIPANTS[id]?.provider} ·{' '}
+                    {!workerReady ? '미연결(Worker 주소·패스코드 없음)' : on ? STATUS_TEXT[turnStatus[id]] : '꺼짐(호출 안 함)'}
                   </p>
                 </div>
                 <button

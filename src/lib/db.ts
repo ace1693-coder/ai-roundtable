@@ -1,4 +1,5 @@
 import type { Meeting, MemoryItem } from './types';
+import { normalizeMeetings, normalizeMemories } from './schema';
 
 /**
  * 회의 기록·공동 지식은 IndexedDB, 설정은 localStorage (전략회의 C1 확정 하이브리드).
@@ -20,6 +21,12 @@ export interface WorkspaceSnapshot {
   memories: MemoryItem[];
   /** DB 를 처음 열어 localStorage 에서 옮겼는지 */
   migrated: boolean;
+  /** 저장된 값을 읽지 못했는지(이때는 자동 저장을 멈춰 기존 데이터를 덮어쓰지 않는다) */
+  readFailed: boolean;
+  /** 빠진 필드를 채워 복구한 회의 수(3.0 형태 등) */
+  repaired: number;
+  /** 내용이 없어 화면에 넣지 않은 레코드 수(원본은 지우지 않는다) */
+  skipped: number;
 }
 
 function hasIndexedDb(): boolean {
@@ -36,7 +43,7 @@ export function createMemoryWorkspace() {
   let memories: MemoryItem[] = [];
   return {
     async load(): Promise<WorkspaceSnapshot> {
-      return { meetings, memories, migrated: true };
+      return { meetings, memories, migrated: true, readFailed: false, repaired: 0, skipped: 0 };
     },
     async save(next: { meetings: Meeting[]; memories: MemoryItem[] }) {
       meetings = next.meetings;
@@ -83,24 +90,37 @@ function getMeta(db: IDBDatabase, key: string): Promise<unknown> {
   });
 }
 
-/** 저장된 회의·기억을 읽는다. IndexedDB가 없으면 migrated=true 로 빈 값을 준다. */
+/**
+ * 저장된 회의·기억을 읽어 **정규화해서** 준다.
+ * IndexedDB가 없으면 빈 값을 준다. 읽기에 실패하면 readFailed=true 로 알려
+ * App 이 기존 데이터를 빈 값으로 덮어쓰지 않게 한다.
+ */
 export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
-  if (!hasIndexedDb()) return { meetings: [], memories: [], migrated: true };
+  if (!hasIndexedDb()) {
+    return { meetings: [], memories: [], migrated: true, readFailed: false, repaired: 0, skipped: 0 };
+  }
   try {
     const db = await openDb();
-    const [meetings, memories, migrated] = await Promise.all([
-      getAll<Meeting>(db, STORE_MEETINGS),
-      getAll<MemoryItem>(db, STORE_MEMORIES),
+    const [meetingsRaw, memoriesRaw, migrated] = await Promise.all([
+      getAll<unknown>(db, STORE_MEETINGS),
+      getAll<unknown>(db, STORE_MEMORIES),
       getMeta(db, 'migratedFromLocalStorage'),
     ]);
     db.close();
+
+    const meetings = normalizeMeetings(meetingsRaw);
+    const memories = normalizeMemories(memoriesRaw);
     return {
-      meetings: meetings.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)),
-      memories: memories.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)),
+      meetings: meetings.items.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)),
+      memories: memories.items.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)),
       migrated: migrated === true,
+      readFailed: false,
+      repaired: meetings.repaired,
+      skipped: meetings.dropped + memories.dropped,
     };
-  } catch {
-    return { meetings: [], memories: [], migrated: true };
+  } catch (error) {
+    console.warn('[AI Roundtable] IndexedDB 를 읽지 못했습니다. 기존 데이터는 그대로 둡니다.', error);
+    return { meetings: [], memories: [], migrated: true, readFailed: true, repaired: 0, skipped: 0 };
   }
 }
 

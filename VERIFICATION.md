@@ -133,3 +133,74 @@
 - localStorage 차단 상태(수정 전 검은 화면이던 조건): `.home` 렌더, 오류 0 — 수정이 라이브에서도 유효함.
 - 새로고침 3회 반복 시 추가 자동 새로고침 없음(무한 새로고침 없음) 확인.
 
+
+## 7. `Cannot read properties of undefined (reading 'gptoss')` 장애 원인·수정·8환경 검증 (2026-11-23 저녁)
+
+### 7-1. 증상과 재현
+
+증상: 저장된 회의방을 열거나 참가자 목록을 그릴 때 앱이 복구 화면(ErrorBoundary)으로 넘어가고
+`Cannot read properties of undefined (reading 'gptoss')` 가 표시된다.
+
+재현(수정 전 번들, `e2e/diag_gptoss.py`, 로컬 dist · 390×844):
+
+| 주입한 저장 데이터 | 결과 |
+|---|---|
+| IndexedDB 회의에 `enabledAi` 없음(4.0 형태에서 중첩 객체만 빠진 기록) | 회의방 렌더 즉시 `TypeError: Cannot read properties of undefined (reading 'gptoss')` — 참가자 목록 map 안 |
+| 3.0 localStorage 회의(작성자 `chatgpt`/`pickle`, `enabledAi` 없음) | 첫 화면에서 `Cannot read properties of undefined (reading 'name')` |
+
+### 7-2. 근본 원인 (파일·함수·줄 — 수정 전 `fc3e78e` 기준)
+
+회의·기억은 저장소에서 **정규화 없이 그대로** 읽어 화면 상태에 넣고 있었다.
+
+| 위치 | 코드 | 왜 죽는가 |
+|---|---|---|
+| `src/lib/db.ts` `loadWorkspace()` | `getAll<Meeting>('meetings')` 결과를 그대로 반환 | 저장된 회의를 스키마 검사 없이 사용. 3.0 기록은 `enabledAi`·`maxTurns`·`auto`·`callCount` 자체가 없다 |
+| `src/lib/storage.ts` `collectLegacyData()` | `readJson<Meeting[]>(KEYS.meetings, [])` 그대로 반환 | 3.0 localStorage 회의를 정규화 없이 IndexedDB 로 옮겼다(첫 4.0 실행 때) |
+| `src/components/RoomScreen.tsx:548` | `const on = meeting.enabledAi[id] !== false;` (참가자 목록 map, 첫 id가 `gptoss`) | **`enabledAi` 가 undefined → 문자 그대로 `reading 'gptoss'`.** 회의방을 열면 시트가 닫혀 있어도 자식이 렌더되어 즉시 발생 |
+| `src/components/RoomScreen.tsx:165` | `m.roleAtTime \|\| meeting.roles[m.authorId]` | `roles` 가 없으면 `reading 'gptoss'`(작성자가 gptoss 인 메시지) |
+| `src/components/RoomScreen.tsx:196,257,554,557` | `PARTICIPANTS[id].name`, `meeting.roles[id]` | 3.0 id(`chatgpt`/`pickle`)면 `reading 'name'`, `roles` 없으면 `reading 'gptoss'` |
+| `src/App.tsx:381` | `still.enabledAi[plan.speaker] === false` | 자동 회의 스텝에서 같은 예외(발언자가 gptoss 일 때) |
+| `src/App.tsx:256,632-639` | `meeting.enabledAi.moderator`, `meeting.enabledAi[id]` | 회의 종료·AI 켜기/끄기에서 같은 예외 |
+| `src/App.tsx:402` | `roleAtTime: meeting.roles[plan.speaker]` | `roles` 없으면 같은 예외 |
+| `src/components/HomeScreen.tsx:124`, `src/lib/summary.ts:25` | `PARTICIPANTS[last.authorId as 'gptoss'].name` | 3.0 작성자 id 면 `reading 'name'` — 첫 화면(이전 회의 목록)에서 죽는다 |
+
+부수 원인: `src/App.tsx` 의 자동 저장 effect 가 **읽기 실패 직후에도** 빈 배열을 IndexedDB 에 쓸 수 있었다(기존 기록을 지울 위험).
+Service Worker 캐시는 `airt4-v2` 로 구캐시는 지우고 있었으나, 배포본 교체를 확실히 하려고 `airt4-v3` 로 올렸다.
+
+### 7-3. 수정한 파일
+
+| 파일 | 변경 |
+|---|---|
+| `src/lib/schema.ts` (신규) | `normalizeMeeting` / `normalizeMessage` / `normalizeMemoryItem` / `normalizeSettings` / `normalizeMeetings` / `normalizeMemories`. 빠진 중첩 필드는 기본값으로 채우고(`enabledAi` 3종 true, `maxTurns` 5, `auto` false, `callCount` 0, `roles` 기본 역할), 3.0 의 `chatgpt`/`pickle` 을 `gptoss`/`moderator` 로 옮긴다. **내용(발언·요약·기억·태그)은 그대로 두고 모르는 필드도 보존**한다. 어떤 입력(undefined·문자열·숫자·깨진 객체)에도 예외를 던지지 않는다 |
+| `src/lib/turns.ts` (신규) | `normalizeMaxTurns` 를 memory 에서 분리(순환 import 방지). `memory.ts` 는 재export |
+| `src/lib/db.ts` | `loadWorkspace()` 가 읽은 값을 정규화해 반환. `readFailed`(읽기 실패)·`repaired`·`skipped` 추가 |
+| `src/lib/storage.ts` | `loadSettings`→`normalizeSettings`, `collectLegacyData`→정규화, `loadActiveMeetingId` 타입 방어. 깨진 JSON·타입 불일치 폴백 유지 |
+| `src/App.tsx` | 정규화된 스냅샷 사용 + 복구 결과를 IndexedDB 에 한 번 되써 마이그레이션 완료. **읽기 실패 시 자동 저장 중단**(기존 기록 보호). `enabledAi`/`roles` 접근 전부 옵셔널 체이닝·기본값 |
+| `src/lib/memory.ts` | `parseMeetingsImport` 가 `normalizeMeeting` 을 거치도록 통일(중복 정규화 코드 제거) |
+| `src/lib/participants.ts` | `authorName`/`authorColor` 가 모르는 작성자에도 이름을 돌려준다 |
+| `src/components/HomeScreen.tsx`, `src/lib/summary.ts` | 작성자 이름을 `authorName()` 으로(3.0 id 에서 죽지 않게) |
+| `src/components/RoomScreen.tsx` | `enabledAi?.[id]`, `roles?.[id] ?? '역할 미지정'`, `PARTICIPANTS[...]?.name`, 상태 칩·참가자 목록에 **미연결** 표시 |
+| `src/components/Avatar.tsx` | 모르는 id 면 기본 사람 아바타 |
+| `src/components/DataSheets.tsx` | 연결 확인 응답에 `models`/`configured` 가 빠져도 죽지 않게 |
+| `src/lib/meetingEngine.ts` | 프롬프트 조립 시 `roles` 기본값 |
+| `public/sw.js` | `airt4-v3` |
+
+### 7-4. 필수 8환경 실제 검증 (`e2e/verify_schema8.py`, 로컬 dist · 390×844 · Android UA)
+
+원본: `e2e/schema8_report.json` · 스크린샷 `screenshots/schema-1~8-*.png`
+
+| # | 환경 | 결과 | 확인한 것 |
+|---|---|---|---|
+| 1 | 저장 데이터 없는 새 사용자 | 통과 | 첫 화면 → 회의 생성 → 메시지 전송 → 새로고침 후 회의·메시지 유지, 참가자 3명 |
+| 2 | 3.0 설정·회의 저장 사용자 | 통과 | 목록에 예전 회의·새 참가자 이름, 기존 회의방 열기, 발언 2건·요약문 보존, IndexedDB 로 옮긴 기록에 `enabledAi` 생성, localStorage 원본 유지 |
+| 3 | `enabledAi` 등 중첩 객체 누락 | 통과 | 회의방·참가자 목록 정상(장애 지점), 채운 값이 IndexedDB 에 저장, Worker 미설정 안내 |
+| 4 | localStorage 접근 차단 | 통과 | 첫 화면·회의 생성·메시지 전송 |
+| 5 | 손상 JSON(`"{broken json"` 등) | 통과 | 첫 화면, 회의 생성·새로고침 유지, 설정이 기본값(이름=나, Worker 빈값)으로 복구 |
+| 6 | 구버전 SW(`airt3-v1`) 잔존 | 통과 | activate 가 구캐시 삭제, SW `airt4-v3`, 화면 정상 |
+| 7 | Worker/API 키 미연결 | 통과 | 상태 칩·참가자 목록 '미연결', 안내 바, 연결 확인 실패 안내 |
+| 8 | Android Chrome 390×844 전체 흐름 | 통과 | 기존 회의 열기, 멘션 입력, 대화 검색, 기억 시트, 새로고침 유지 |
+
+각 시나리오 공통: 복구 화면 0건 · 콘솔 오류 0건 · 페이지 오류 0건.
+
+회귀 확인: `npm run typecheck` 통과 · `npm test` **122개 통과(schema 22개 추가)** · `npm run build` 통과 ·
+`e2e/auto_meeting.py` **24/24**(실제 자동 회의 루프 그대로) · `e2e/verify_resilience.py` 정상(검은 화면 5종).
