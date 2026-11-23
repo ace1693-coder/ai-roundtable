@@ -130,7 +130,7 @@ export default function App() {
           memories,
           activeMeetingId: activeId && meetings.some((m) => m.id === activeId) ? activeId : null,
         }));
-        if (snapshot.readFailed) showToast('저장된 기록을 읽지 못했습니다. 기존 기록 보호를 위해 자동 저장을 잠시 멈췄습니다.');
+        if (snapshot.readFailed) showToast('저장된 기록을 읽지 못해 기존 데이터 보호를 위해 자동 저장을 멈췄습니다. 캐시 초기화 후 새로고침해 주세요.');
       } catch (error) {
         // 저장소를 전혀 쓸 수 없는 브라우저에서도 빈 상태로 앱이 열려야 한다(검은 화면 방지).
         saveBlockedRef.current = true;
