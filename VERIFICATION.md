@@ -53,5 +53,26 @@
 
 ## 4. 상태 요약
 
-- 완료: 브랜치 `feat/auto-meeting` 로컬 커밋 · 위 1~2절 전부 · 배포/푸시 없음
-- 운영 URL `https://ace1693-coder.github.io/ai-roundtable/` 은 **여전히 v1 수동 버전**이다.
+- 2026-11-23: `feat/auto-meeting` → `main` 병합(`--no-ff`, 79e8b1b) 후 GitHub Pages에 4.0 배포 완료 — 아래 5절.
+
+## 5. 라이브 배포·실서버 연동 검증 (2026-11-23)
+
+| 항목 | 값 |
+|---|---|
+| 라이브 URL | https://ace1693-coder.github.io/ai-roundtable/ |
+| main 병합 커밋 | `79e8b1b` (merge feat/auto-meeting) |
+| gh-pages 배포 커밋 | `051de75` (main 79e8b1b 빌드 산출물) |
+| 서빙 번들 | `assets/index-DCxeMt9I.js` (GET 200, 215,322B) · `assets/index-CfetZq5Y.css` (200, 15,421B) |
+| Worker | https://ai-roundtable-api.gimnaggyun1.workers.dev (v4.0.0, groq/gemini/accessToken 모두 설정됨) |
+| 검증 스크립트 | `e2e/live_pages.py`(전체 흐름) · `e2e/live_console_check.py`(콘솔 청정도) |
+| 원본 기록 | `downloads/ai-roundtable-deploy/live_report.json`, `live_console_report.json`, `live-01~06*.png` (390×844, DPR 3) |
+
+실측 결과
+- 라이브 페이지 로드 OK, 바닥글에 `AI Roundtable 4.0` 표기, 스크립트는 4.0 빌드 해시.
+- 설정에서 Worker 주소 + 개인용 패스코드로 **연결 확인 성공**: `연결됨 · GPT-OSS openai/gpt-oss-120b / Gemini gemini-3.5-flash-lite / 사회자 gemini-3.5-flash-lite`.
+- 회의방 생성 시 자동 회의가 바로 시작되고 **실제 API 발언**이 도착: `gemini-3.5-flash-lite · Google AI Studio · 1.6s`, `openai/gpt-oss-120b · GroqCloud · 1.0s`(출처: 실제 API).
+- 첫 실행에서 20초 방치 → 20호출 중 19번째부터 Worker 자체 제한 `429`(분당 20회, IP 기준) 1건이 콘솔에 남음. 정상 간격 재검증(`live_console_check.py`, 7/7): **콘솔 오류 0 · 페이지 오류 0 · 실패 요청 0 · Worker 응답 200/200/200**.
+- CORS: `Origin: https://ace1693-coder.github.io`로 `/api/health` 200 + `access-control-allow-origin` 반환, `OPTIONS /api/turn` 프리플라이트 204. Worker `ALLOWED_ORIGINS`(guard.ts)에 GitHub Pages 출처가 들어 있어 별도 설정 변경 불필요.
+
+미검증(기존 항목 그대로)
+- 실기기(안드로이드 폰) 홈 화면 설치 후 백그라운드 중단, SSE 스트리밍, 429 시 제공사 폴백은 여전히 미검증/미구현.
