@@ -1,5 +1,6 @@
 import type { AppData, Meeting, MemoryItem, Settings } from './types';
 import { DEFAULT_SETTINGS, normalizeMaxTurns } from './memory';
+import { storageGet, storageSet } from './safeStorage';
 
 /**
  * localStorage 키를 분리한다. 한 키에 몰면 한 번의 손상으로 회의·기억·설정을 전부 잃는다.
@@ -15,7 +16,7 @@ export const KEYS = {
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = storageGet(key);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as T;
     return parsed ?? fallback;
@@ -25,11 +26,9 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function writeJson(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // 용량 초과·사생활 모드에서 저장 실패. 화면은 계속 동작하고 JSON 내보내기로 백업할 수 있다.
-  }
+  // 저장이 막힌 브라우저(웹뷰·사생활 모드)에서도 예외를 내지 않는다.
+  // 실패해도 화면은 계속 동작하고 JSON 내보내기로 백업할 수 있다.
+  storageSet(key, JSON.stringify(value));
 }
 
 /** 설정만 localStorage 에서 읽는다(회의·기억은 IndexedDB). */
@@ -92,16 +91,12 @@ export function saveSettings(settings: Settings): void {
  * 개인 식별 정보가 아니라 요청량을 세는 표식이며, 지우면 새로 발급된다.
  */
 export function clientSessionId(): string {
-  try {
-    const existing = localStorage.getItem(KEYS.client);
-    if (existing && /^[A-Za-z0-9_-]{8,64}$/.test(existing)) return existing;
-    const fresh = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-    localStorage.setItem(KEYS.client, fresh);
-    return fresh;
-  } catch {
-    // 사생활 모드 등 저장이 막히면 이번 실행 동안만 쓰는 ID를 쓴다.
-    return `e${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 6)}`;
-  }
+  const existing = storageGet(KEYS.client);
+  if (existing && /^[A-Za-z0-9_-]{8,64}$/.test(existing)) return existing;
+  const fresh = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  // 저장이 막혀 있으면 storageSet 이 메모리에만 남긴다(이번 실행 동안 같은 ID).
+  storageSet(KEYS.client, fresh);
+  return fresh;
 }
 
 export function saveSession(activeMeetingId: string | null): void {

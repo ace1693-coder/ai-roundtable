@@ -16,6 +16,7 @@ import {
 } from './lib/meetingEngine';
 import { loadWorkspace, saveWorkspace } from './lib/db';
 import { buildLocalSummary } from './lib/summary';
+import { storageGet } from './lib/safeStorage';
 import { isWorkerConfigured, requestSummary, requestTurn, WorkerError } from './lib/workerClient';
 import { scanSensitive } from '../shared/sensitive';
 import { parseDecisionLine } from '../shared/protocol';
@@ -28,10 +29,14 @@ import { MemorySheet, SettingsSheet } from './components/DataSheets';
 
 export type TurnStatus = 'idle' | 'thinking' | 'done' | 'error';
 
-/** 무료 한도(Groq TPM 8K, Gemini RPM) 안에서 호출 간격을 벌린다. 값은 config/meeting.ts. */
+/**
+ * 무료 한도(Groq TPM 8K, Gemini RPM) 안에서 호출 간격을 벌린다. 값은 config/meeting.ts.
+ * 저장소 접근은 safeStorage 를 거친다 — 웹뷰에서 localStorage 가 막혀도 모듈 평가가 죽지 않아야 한다.
+ */
+const e2eGapMs = Number(storageGet('airt3.test.gapMs'));
 const MIN_GAP_MS =
-  typeof localStorage !== 'undefined' && Number.isFinite(Number(localStorage.getItem('airt3.test.gapMs')))
-    ? { gptoss: Number(localStorage.getItem('airt3.test.gapMs')), gemini: Number(localStorage.getItem('airt3.test.gapMs')) }
+  Number.isFinite(e2eGapMs) && e2eGapMs > 0
+    ? { gptoss: e2eGapMs, gemini: e2eGapMs }
     : MEETING_TUNING.callGapMs; // airt3.test.gapMs 는 자동 E2E 전용(사람용 설정 아님)
 
 function appNotice(text: string): ChatMessage {
@@ -98,22 +103,28 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const snapshot = await loadWorkspace();
-      const legacy = collectLegacyData();
-      const meetings = snapshot.meetings.length ? snapshot.meetings : legacy.meetings;
-      const memories = snapshot.memories.length ? snapshot.memories : legacy.memories;
-      if (!snapshot.migrated && (legacy.meetings.length || legacy.memories.length)) {
-        await saveWorkspace({ meetings, memories });
+      try {
+        const snapshot = await loadWorkspace();
+        const legacy = collectLegacyData();
+        const meetings = snapshot.meetings.length ? snapshot.meetings : legacy.meetings;
+        const memories = snapshot.memories.length ? snapshot.memories : legacy.memories;
+        if (!snapshot.migrated && (legacy.meetings.length || legacy.memories.length)) {
+          await saveWorkspace({ meetings, memories });
+        }
+        if (!alive) return;
+        const activeId = loadActiveMeetingId();
+        setData((prev) => ({
+          ...prev,
+          meetings,
+          memories,
+          activeMeetingId: activeId && meetings.some((m) => m.id === activeId) ? activeId : null,
+        }));
+      } catch (error) {
+        // 저장소를 전혀 쓸 수 없는 브라우저에서도 빈 상태로 앱이 열려야 한다(검은 화면 방지).
+        console.warn('[AI Roundtable] 저장된 데이터를 읽지 못했습니다.', error);
+      } finally {
+        if (alive) setReady(true);
       }
-      if (!alive) return;
-      const activeId = loadActiveMeetingId();
-      setData((prev) => ({
-        ...prev,
-        meetings,
-        memories,
-        activeMeetingId: activeId && meetings.some((m) => m.id === activeId) ? activeId : null,
-      }));
-      setReady(true);
     })();
     return () => {
       alive = false;

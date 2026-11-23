@@ -28,6 +28,17 @@ body,
   height: 100%;
 }
 
+/* dvh 를 모르는 웹뷰에서 화면이 0px 로 접히던 문제 방지(2026-11-23 검은 화면 대응) */
+html {
+  min-height: 100%;
+  background: var(--bg);
+}
+body,
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -220,6 +231,7 @@ select:focus {
 
 /* ---------------- 홈 ---------------- */
 .home {
+  height: 100vh;
   height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -370,6 +382,7 @@ select:focus {
   position: relative;
   display: flex;
   flex-direction: column;
+  height: 100vh;
   height: 100dvh;
   max-width: 560px;
   margin: 0 auto;
@@ -1141,4 +1154,61 @@ select:focus {
 .participant.off { opacity: 0.55; }
 .participant.off b { text-decoration: line-through; }
 .btn.small { padding: 6px 10px; font-size: 12px; min-height: 30px; }
-.boot { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: var(--muted, #9ca3af); font-size: 14px; }
+/* 부팅 화면: 레이아웃이 접혀도 항상 보이도록 고정 오버레이로 띄운다. */
+.boot {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--sub);
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+/* 렌더 오류 안내(ErrorBoundary) — 검은 화면 대신 원인과 복구 버튼을 보여 준다. */
+.crash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--text);
+}
+.crash h1 {
+  font-size: 17px;
+  font-weight: 800;
+}
+.crash p {
+  max-width: 340px;
+  color: #c3ccd6;
+  font-size: 13.5px;
+}
+.crash pre {
+  max-width: 340px;
+  max-height: 30vh;
+  overflow: auto;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: #8d97a4;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}

@@ -76,3 +76,45 @@
 
 미검증(기존 항목 그대로)
 - 실기기(안드로이드 폰) 홈 화면 설치 후 백그라운드 중단, SSE 스트리밍, 429 시 제공사 폴백은 여전히 미검증/미구현.
+
+## 6. 검은 화면 사고 수정·재검증 (2026-11-23)
+
+증상: 안드로이드 폰 인앱 브라우저에서 앱을 열면 배경색(#0b0d10)만 남고 왼쪽 위에 테두리 일부만 보였다(사용자 스크린샷 `attachments/2026-11-23/1000025138-....jpg`).
+
+원인(실측 재현)
+- 라이브 사이트는 200 OK·정상 번들. 390×844 모바일 뷰포트에서 콘솔/페이지 오류 0건으로 정상 렌더 → 서버 문제 아님.
+- `localStorage` 접근이 막힌 컨텍스트(인앱 웹뷰·쿠키 차단)를 흉내 내자 `pageerror: "Access is denied for this document." (SecurityError)`, `#root` 내용이 빈 문자열, 화면은 배경색만 남음 → 사용자 스크린샷과 동일 상태.
+- 원인 줄: `src/App.tsx` 모듈 최상단 `typeof localStorage !== 'undefined' && … localStorage.getItem('airt3.test.gapMs')`. 저장소가 막힌 웹뷰에서는 **`typeof localStorage` 자체가 SecurityError 를 던진다**(크로미움에서 직접 확인). 모듈 평가가 중단되면 React 가 마운트되지 않는다.
+- 부수 원인: `public/sw.js` 캐시 버전이 `airt3-v1` 그대로여서 구버전 캐시가 정리되지 않았다.
+
+수정
+| 파일 | 변경 |
+|---|---|
+| `src/lib/safeStorage.ts` (신규) | localStorage 접근을 try/catch 로 감싼 래퍼. 막히면 메모리 폴백, 예외 없음 |
+| `src/lib/storage.ts` | read/write/clientSessionId 를 safeStorage 경유로 교체 |
+| `src/App.tsx` | 모듈 최상단 localStorage 직접 접근 제거, 초기 로드 try/catch/finally(실패해도 ready) |
+| `src/ErrorBoundary.tsx` (신규) | 렌더 오류 시 원인 + [캐시 초기화 후 새로고침] / [그냥 다시 시도] |
+| `src/lib/fatalScreen.ts` (신규) | 전역 error/unhandledrejection 감지 → 화면이 비었을 때만 안내 오버레이 |
+| `src/lib/resetCache.ts` (신규) | SW 등록 해제 + caches 전체 삭제 + reload |
+| `src/main.tsx` | ErrorBoundary 적용, 전역 오류 설치, React 렌더 확인 후 `html[data-airt=ready]` 표시, SW `updateViaCache:none`·`SKIP_WAITING`·controllerchange 1회 새로고침 |
+| `index.html` | 인라인 배경/스피너 CSS, `#root` 안 로딩 문구, `<noscript>`, 9초 인라인 워치독(번들 미실행 시 안내+초기화 버튼) |
+| `public/sw.js` | `airt4-v2` · install allSettled · activate 구캐시 전부 삭제+claim · 네비게이션 network-first(cache:reload) · 자산 stale-while-revalidate · sw.js 자기 캐시 금지 |
+| `src/styles.css` | `height:100vh; height:100dvh` 폴백, html/body/#root min-height, `.boot` 고정 오버레이, `.crash` 안내 스타일 |
+
+실측 검증 (`e2e/verify_resilience.py`, `e2e/verify_sw_upgrade.py`, 로컬 dist · 390×844 · Chromium)
+| # | 시나리오 | 결과 |
+|---|---|---|
+| 1 | 정상 로드 | `.home` 렌더, 콘솔·페이지 오류 0, 로딩 문구 제거 |
+| 2 | localStorage 차단 | `.home` 렌더, 오류 0 (수정 전: 검은 화면) |
+| 3 | localStorage+indexedDB 모두 차단 | `.home` 렌더, 오류 0 |
+| 4 | 앱 JS 404 | 9초 뒤 인라인 안내 + [캐시 초기화 후 새로고침] 버튼 표시 |
+| 5 | 구워커(airt3-v1) → 새 워커 | activate 가 `airt3-v1` 삭제, 캐시는 `airt4-v2` 하나, 새로고침 후 정상 렌더 |
+
+정적·단위·E2E
+- `npm run typecheck` 통과(앱·Worker 오류 0)
+- `npm test` 11파일 100개 통과(safeStorage 3개 추가)
+- `npm run build` 통과 · index.html 6.83KB · JS 213.02KB(gzip 71.8KB) · CSS 16.22KB(gzip 4.16KB)
+- `e2e/auto_meeting.py` 24/24 통과(회귀 없음)
+
+미검증
+- 사용자 실제 폰 인앱 브라우저에서의 최종 확인(웹뷰 종류·버전 의존). 새 SW 가 구캐시를 지우므로 재방문 시 해소되는지 사용자 확인 필요.

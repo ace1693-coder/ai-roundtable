@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#111317" />
+    <meta name="theme-color" content="#0b0d10" />
     <meta name="description" content="AI Roundtable — ChatGPT·Gemini·Pickle·내가 한 대화방에서 회의하는 카카오톡형 AI 단체 채팅 앱" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -12,9 +12,161 @@
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <link rel="apple-touch-icon" href="./icon-192.png" />
     <title>AI Roundtable</title>
+    <!-- 앱 CSS/JS 가 오지 않아도 배경과 로딩 안내는 보이도록 인라인으로 먼저 깐다. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #0b0d10;
+        color: #e9ecf1;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html {
+        height: 100%;
+      }
+      #root {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      #airt-boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 24px;
+        text-align: center;
+        color: #97a1ae;
+        font: 13.5px/1.5 -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR',
+          system-ui, sans-serif;
+      }
+      #airt-boot b {
+        color: #e9ecf1;
+        font-size: 16px;
+        letter-spacing: -0.2px;
+      }
+      #airt-boot .airt-spin {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid #2a3038;
+        border-top-color: #fee500;
+        animation: airt-spin 0.9s linear infinite;
+      }
+      @keyframes airt-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="airt-boot">
+        <div class="airt-spin"></div>
+        <b>AI Roundtable</b>
+        <span>불러오는 중…</span>
+      </div>
+    </div>
+    <noscript>
+      <div style="padding: 24px; text-align: center; color: #c3ccd6">
+        이 앱은 자바스크립트가 필요합니다. 브라우저 설정에서 자바스크립트를 켜고 다시 열어 주세요.
+      </div>
+    </noscript>
+    <script>
+      /* 인라인 워치독: 앱 번들이 아예 실행되지 않아도 검은 화면만 남기지 않는다.
+         React 가 화면을 그리면 html[data-airt="ready"] 가 붙고, 그 전에만 안내를 띄운다. */
+      (function () {
+        var shown = false;
+        function ready() {
+          return document.documentElement.getAttribute('data-airt') === 'ready';
+        }
+        function show(message, detail) {
+          if (shown || ready()) return;
+          shown = true;
+          var root = document.getElementById('root');
+          if (!root) return;
+          root.textContent = '';
+          var wrap = document.createElement('div');
+          wrap.id = 'airt-fatal';
+          wrap.setAttribute('role', 'alert');
+          wrap.style.cssText =
+            'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;background:#0b0d10;color:#e9ecf1;text-align:center;font:14px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif';
+          var h = document.createElement('div');
+          h.textContent = '화면을 열지 못했어';
+          h.style.cssText = 'font-size:17px;font-weight:800';
+          wrap.appendChild(h);
+          var p = document.createElement('div');
+          p.textContent = message;
+          p.style.cssText = 'max-width:340px;color:#c3ccd6';
+          wrap.appendChild(p);
+          if (detail) {
+            var d = document.createElement('div');
+            d.textContent = String(detail).slice(0, 200);
+            d.style.cssText =
+              'max-width:340px;color:#8d97a4;font-size:11.5px;background:#14171c;border:1px solid #262c35;border-radius:10px;padding:8px 10px;overflow-wrap:anywhere';
+            wrap.appendChild(d);
+          }
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = '캐시 초기화 후 새로고침';
+          btn.style.cssText =
+            'border:1px solid #3a4352;background:#fee500;color:#191919;border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:700';
+          btn.onclick = function () {
+            btn.textContent = '초기화 중…';
+            var work = Promise.resolve();
+            try {
+              work = navigator.serviceWorker
+                .getRegistrations()
+                .then(function (regs) {
+                  return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                })
+                .catch(function () {});
+            } catch (e) {}
+            work
+              .then(function () {
+                try {
+                  return caches.keys().then(function (keys) {
+                    return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                  });
+                } catch (e) {
+                  return null;
+                }
+              })
+              .then(function () { location.reload(); })
+              .catch(function () { location.reload(); });
+          };
+          wrap.appendChild(btn);
+          var note = document.createElement('div');
+          note.textContent = '저장된 회의·기억은 지워지지 않아. 캐시만 새로 받아.';
+          note.style.cssText = 'color:#6f7987;font-size:11.5px';
+          wrap.appendChild(note);
+          document.body.appendChild(wrap);
+        }
+        window.addEventListener('error', function (e) {
+          /* 리소스(이미지·매니페스트) 실패는 무시하고, 스크립트 실행 오류만 알린다. */
+          var target = e && e.target;
+          if (target && target !== window && target.tagName !== 'SCRIPT' && target.tagName !== 'LINK') return;
+          var linkFail = target && target.tagName === 'LINK';
+          if (linkFail && target.rel !== 'modulepreload' && target.rel !== 'preload') return;
+          window.setTimeout(function () {
+            show('앱 파일을 실행하는 중에 오류가 났어. 아래 버튼을 누르면 캐시를 지우고 다시 열어.', e && (e.message || (e.target && e.target.src)));
+          }, 0);
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          window.setTimeout(function () {
+            show('앱을 시작하지 못했어. 아래 버튼을 누르면 캐시를 지우고 다시 열어.', e && e.reason && (e.reason.message || e.reason));
+          }, 0);
+        });
+        window.setTimeout(function () {
+          show('앱을 불러오는 데 시간이 너무 오래 걸려. 네트워크를 확인하고, 아래 버튼으로 캐시를 새로 받아 봐.');
+        }, 9000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
