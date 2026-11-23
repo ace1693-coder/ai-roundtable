@@ -1,0 +1,178 @@
+{
+  "url": "https://ace1693-coder.github.io/ai-roundtable/",
+  "scenarios": [
+    {
+      "name": "A. 신규 설치 — 첫 화면·회의 생성·참가자·새로고침 유지",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면(.home)이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "회의방이 열렸다",
+          "ok": true
+        },
+        {
+          "check": "참가자 3명이 표시된다",
+          "ok": true
+        },
+        {
+          "check": "메시지가 보인다",
+          "ok": true
+        },
+        {
+          "check": "새로고침 후 회의가 유지된다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "bundle": [
+        "index-B9XOQAkx.js",
+        "index-B9XOQAkx.js"
+      ]
+    },
+    {
+      "name": "B. 3.0 기록 사용자 — 이전 회의 열기·마이그레이션",
+      "ok": true,
+      "rows": [
+        {
+          "check": "첫 화면이 그려졌다",
+          "ok": true
+        },
+        {
+          "check": "예전 회의가 목록에 나온다",
+          "ok": true
+        },
+        {
+          "check": "예전 발언이 보존됐다",
+          "ok": true
+        },
+        {
+          "check": "참가자 목록이 정상(장애 지점)",
+          "ok": true
+        },
+        {
+          "check": "예전 역할명이 표시된다",
+          "ok": true
+        },
+        {
+          "check": "IndexedDB 로 옮긴 기록에 enabledAi 가 생겼다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "bundle": [
+        "index-B9XOQAkx.js",
+        "index-B9XOQAkx.js"
+      ]
+    },
+    {
+      "name": "C. enabledAi 누락 회의 — 장애 지점 복구",
+      "ok": true,
+      "rows": [
+        {
+          "check": "회의방이 열린다",
+          "ok": true
+        },
+        {
+          "check": "참가자 목록이 정상 표시된다",
+          "ok": true
+        },
+        {
+          "check": "빠진 enabledAi 가 채워졌다",
+          "ok": true
+        },
+        {
+          "check": "메시지가 보인다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "bundle": [
+        "index-B9XOQAkx.js",
+        "index-B9XOQAkx.js"
+      ]
+    },
+    {
+      "name": "D. 구버전 캐시(airt3-v1) 정리·SW 버전",
+      "ok": true,
+      "rows": [
+        {
+          "check": "구캐시 airt3-v1 이 없다",
+          "ok": true
+        },
+        {
+          "check": "SW 가 airt4-v3 이다",
+          "ok": true
+        },
+        {
+          "check": "첫 화면이 정상이다",
+          "ok": true
+        },
+        {
+          "check": "복구 화면(.crash)이 뜨지 않았다",
+          "ok": true
+        },
+        {
+          "check": "콘솔 오류 0건",
+          "ok": true,
+          "detail": []
+        },
+        {
+          "check": "페이지 오류 0건",
+          "ok": true,
+          "detail": []
+        }
+      ],
+      "bundle": [
+        "index-B9XOQAkx.js"
+      ]
+    }
+  ],
+  "passed": 4,
+  "failed": 0,
+  "sw": "airt4-v3",
+  "caches": [
+    "airt4-v3"
+  ]
+}

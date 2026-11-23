@@ -204,3 +204,26 @@ Service Worker 캐시는 `airt4-v2` 로 구캐시는 지우고 있었으나, 배
 
 회귀 확인: `npm run typecheck` 통과 · `npm test` **122개 통과(schema 22개 추가)** · `npm run build` 통과 ·
 `e2e/auto_meeting.py` **24/24**(실제 자동 회의 루프 그대로) · `e2e/verify_resilience.py` 정상(검은 화면 5종).
+
+### 7-5. 실서버 검증 (배포 후, 390×844 · Android UA)
+
+| 항목 | 값 |
+|---|---|
+| 라이브 URL | https://ace1693-coder.github.io/ai-roundtable/ |
+| main 커밋 | `da1acef` |
+| gh-pages 배포 커밋 | `30d05b7` (da1acef 빌드 산출물) |
+| 서빙 번들 | `assets/index-B9XOQAkx.js` (217.88KB, gzip 73.68KB) · `assets/index-DGajKxzW.css` |
+| SW | `airt4-v3` (캐시는 `airt4-v3` 하나) |
+| 검증 스크립트 | `e2e/live_schema_check.py` · 원본 `e2e/live_schema_report.json` |
+| 스크린샷 | `downloads/ai-roundtable-live-A-new.png` · `-B-legacy.png` · `-C-missing-fields.png` · `-D-sw.png` |
+
+| # | 시나리오 | 결과 |
+|---|---|---|
+| A | 신규 설치 — 첫 화면·회의 생성·참가자 3명·새로고침 유지 | 통과 |
+| B | 3.0 localStorage 기록 — 이전 회의 열기, 발언·역할 보존, IndexedDB 마이그레이션(`enabledAi` 생성) | 통과 |
+| C | `enabledAi` 빠진 회의 — 회의방·참가자 목록 정상(장애 지점), 채운 값 저장 | 통과 |
+| D | 구버전 캐시 `airt3-v1` 잔존 — 새 SW 가 삭제, `airt4-v3` | 통과 |
+
+전 시나리오 콘솔 오류 0건 · 페이지 오류 0건 · 복구 화면 0건.
+
+미검증: 사용자 실제 폰(안드로이드 인앱/크롬)에서의 확인 — 웹뷰 종류·버전 의존이라 사용자가 열어 봐야 최종 확정된다.
